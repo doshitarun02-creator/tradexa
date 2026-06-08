@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: tradexa-backend
+    env: python
+    rootDir: tradexa-backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: MARKETAUX_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 10000
