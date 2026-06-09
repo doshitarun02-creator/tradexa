@@ -29,21 +29,48 @@ def setup_indexes():
     except Exception:
         pass
 
-    db.price_cache.create_index(
-        [("created_at", ASCENDING)],
-        expireAfterSeconds=60,
-        name="created_at_1"
-    )
-    db.news_cache.create_index(
-        [("created_at", ASCENDING)],
-        expireAfterSeconds=900,
-        name="created_at_1"
-    )
-    db.users.create_index([("email", ASCENDING)], unique=True)
-    db.trades.create_index([("user_id", ASCENDING)])
-    db.trades.create_index([("market_id", ASCENDING)])
-    db.markets.create_index([("status", ASCENDING)])
-    db.markets.create_index([("category", ASCENDING)])
+    try:
+        db.price_cache.create_index(
+            [("created_at", ASCENDING)],
+            expireAfterSeconds=60,
+            name="created_at_1"
+        )
+    except Exception:
+        pass
+
+    try:
+        db.news_cache.create_index(
+            [("created_at", ASCENDING)],
+            expireAfterSeconds=900,
+            name="created_at_1"
+        )
+    except Exception:
+        pass
+
+    try:
+        db.users.create_index([("email", ASCENDING)], unique=True)
+    except Exception:
+        pass
+
+    try:
+        db.trades.create_index([("user_id", ASCENDING)])
+    except Exception:
+        pass
+
+    try:
+        db.trades.create_index([("market_id", ASCENDING)])
+    except Exception:
+        pass
+
+    try:
+        db.markets.create_index([("status", ASCENDING)])
+    except Exception:
+        pass
+
+    try:
+        db.markets.create_index([("category", ASCENDING)])
+    except Exception:
+        pass
 
 with app.app_context():
     setup_indexes()
