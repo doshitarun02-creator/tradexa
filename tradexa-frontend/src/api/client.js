@@ -5,14 +5,22 @@ const API_BASE_URL =
 
 const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
-  withCredentials: false,
+  withCredentials: true,
 });
 
-// Attach JWT from sessionStorage
+function getCsrfToken() {
+  const match = document.cookie.match(/csrf_access_token=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+// Request interceptor to attach CSRF token for state-changing operations
 apiClient.interceptors.request.use((config) => {
-  const token = window.sessionStorage.getItem("tradexa_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const method = (config.method || "").toLowerCase();
+  if (["post", "patch", "delete", "put"].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) {
+      config.headers["X-CSRF-TOKEN"] = csrf;
+    }
   }
   return config;
 });
@@ -22,7 +30,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      window.sessionStorage.removeItem("tradexa_token");
       window.sessionStorage.removeItem("tradexa_user");
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";

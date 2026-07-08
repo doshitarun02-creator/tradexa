@@ -1,7 +1,10 @@
 import requests
+import time
 from datetime import datetime, timezone
+from pymongo import ReturnDocument
 from flask import current_app
 from config import Config
+from utils.logger import logger
 
 
 MARKETAUX_URL = "https://api.marketaux.com/v1/news/all"
@@ -61,16 +64,40 @@ def _fetch_from_marketaux() -> list:
     return articles
 
 
-def get_news() -> list:
-    db = current_app.db
-    cached = _get_cached_news(db)
-    if cached is not None:
-        return cached
+def fetch_external_news():
+    return {"articles": _fetch_from_marketaux()}
+
+
+def get_news(db, fetch_external_news):
+    cached = db.news_cache.find_one({"_id": "news"})
+    if cached and (datetime.now(timezone.utc) - cached["updated_at"].replace(tzinfo=timezone.utc)).total_seconds() < 60:
+        return cached["data"]
+
+    lock = db.cache_locks.find_one_and_update(
+        {"_id": "news_lock"},
+        {"$setOnInsert": {"locked_at": datetime.now(timezone.utc)}},
+        upsert=True,
+        return_document=ReturnDocument.BEFORE,
+    )
+
+    if lock is not None:
+        for _ in range(3):
+            time.sleep(0.5)
+            cached = db.news_cache.find_one({"_id": "news"})
+            if cached:
+                return cached["data"]
+        return cached["data"] if cached else {}
 
     try:
-        articles = _fetch_from_marketaux()
+        data = fetch_external_news()
+        db.news_cache.update_one(
+            {"_id": "news"},
+            {"$set": {"data": data, "updated_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+        return data
     except Exception as e:
-        return [{"error": str(e), "title": "Failed to fetch news", "url": "", "source": "", "published_at": "", "sentiment": None}]
-
-    _set_cached_news(db, articles)
-    return articles
+        logger.exception("news_feed error")
+        raise
+    finally:
+        db.cache_locks.delete_one({"_id": "news_lock"})

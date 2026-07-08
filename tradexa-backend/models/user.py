@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from bson import ObjectId
 
+
 def create_user(name: str, email: str, password_hash: str, role: str = "user") -> dict:
     return {
         "name": name,
@@ -8,11 +9,13 @@ def create_user(name: str, email: str, password_hash: str, role: str = "user") -
         "password_hash": password_hash,
         "wallet": 1000.0,
         "role": role,
+        "status": "active",
         "wins": 0,
         "losses": 0,
         "total_trades": 0,
         "created_at": datetime.now(timezone.utc),
     }
+
 
 def serialize_user(user: dict) -> dict:
     if not user:
@@ -23,6 +26,7 @@ def serialize_user(user: dict) -> dict:
         "email": user.get("email", ""),
         "wallet": user.get("wallet", 1000.0),
         "role": user.get("role", "user"),
+        "status": user.get("status", "active"),
         "wins": user.get("wins", 0),
         "losses": user.get("losses", 0),
         "total_trades": user.get("total_trades", 0),

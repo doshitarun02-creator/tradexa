@@ -9,6 +9,7 @@ import {
   Trophy,
 } from "lucide-react";
 import useAuth from "../hooks/useAuth";
+import usePermissions from "../hooks/usePermissions";
 import usePrices from "../hooks/usePrices";
 import { formatChange, formatINR } from "../utils/formatters";
 
@@ -22,6 +23,7 @@ const navItems = [
 
 const Sidebar = ({ isMobile = false }) => {
   const { user } = useAuth();
+  const { isAnyAdmin } = usePermissions();
   const { getPriceForSymbol } = usePrices();
   const location = useLocation();
 
@@ -44,7 +46,7 @@ const Sidebar = ({ isMobile = false }) => {
             <div className="text-xs uppercase tracking-[0.25em] text-slate-400">
               TradeXa
             </div>
-            <div className="text-sm font-semibold text-slate-50">
+            <div className="text-sm font-semibold text-slate-55">
               Opinion Terminal
             </div>
           </div>
@@ -86,7 +88,7 @@ const Sidebar = ({ isMobile = false }) => {
               </NavLink>
             );
           })}
-          {user?.role === "admin" && (
+          {isAnyAdmin && (
             <NavLink
               to="/admin"
               className={`flex flex-col items-center justify-center px-2 py-1.5 rounded-xl ${
@@ -128,7 +130,7 @@ const Sidebar = ({ isMobile = false }) => {
                 </NavLink>
               );
             })}
-            {user?.role === "admin" && (
+            {isAnyAdmin && (
               <NavLink
                 to="/admin"
                 className={({ isActive }) =>

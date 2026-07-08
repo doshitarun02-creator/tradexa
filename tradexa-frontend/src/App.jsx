@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Activity from "./pages/Activity";
 import News from "./pages/News";
 import Admin from "./pages/Admin";
+import { PermissionProvider } from "./context/PermissionContext";
 
 const RouteTransition = ({ children }) => (
   <motion.div
@@ -141,7 +142,9 @@ const AnimatedRoutes = () => {
 const App = () => {
   return (
     <div className="h-screen w-screen bg-background text-slate-100 font-sans">
-      <AnimatedRoutes />
+      <PermissionProvider>
+        <AnimatedRoutes />
+      </PermissionProvider>
     </div>
   );
 };

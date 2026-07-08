@@ -1,32 +1,54 @@
 from bson import ObjectId
 from datetime import datetime, timezone
 
-
-def settle_market(db, market_oid: ObjectId, winning_side: str) -> dict:
+def settle_market(db, market_oid, winning_side: str) -> dict:
     """
     Settle a market by crediting winners and marking losers.
-    Idempotent: will not re-settle an already-settled market.
-
-    Returns dict with settled_count and total_payout.
+    Locks the market in 'settling' state to prevent concurrent double-settlements.
+    Supports string or ObjectId IDs and quantity/shares mapping.
     """
-    market = db.markets.find_one({"_id": market_oid})
-    if not market or market.get("status") == "settled":
-        return {"settled_count": 0, "total_payout": 0.0}
+    if isinstance(market_oid, str):
+        try:
+            market_oid = ObjectId(market_oid)
+        except Exception:
+            pass
 
-    open_trades = list(db.trades.find({"market_id": market_oid, "status": "open"}))
+    market = db.markets.find_one({"_id": market_oid})
+    if not market:
+        return {"already_settling": False, "settled_count": 0, "total_payout": 0.0}
+
+    status = market.get("status")
+    if status == "settled" or status == "settling":
+        return {"already_settling": True, "settled_count": 0, "total_payout": 0.0}
+
+    # Set status to settling to lock concurrent settlements
+    db.markets.update_one({"_id": market_oid}, {"$set": {"status": "settling"}})
+
+    # Fetch open trades (market_id can be ObjectId or string)
+    open_trades = list(db.trades.find({
+        "$or": [
+            {"market_id": market_oid},
+            {"market_id": str(market_oid)}
+        ],
+        "status": "open"
+    }))
 
     settled_count = 0
     total_payout = 0.0
 
     for trade in open_trades:
-        user_oid = trade["user_id"]
+        user_id_field = trade.get("user_id")
+        try:
+            user_oid = ObjectId(user_id_field) if isinstance(user_id_field, str) else user_id_field
+        except Exception:
+            user_oid = user_id_field
+
         side = trade.get("side")
-        quantity = trade.get("quantity", 0)
+        quantity = trade.get("quantity") or trade.get("shares", 0)
         price_per_share = trade.get("price_per_share", 0.0)
         total_cost = trade.get("total_cost", 0.0)
 
         if side == winning_side:
-            # Winner: gets ₹10 per share
             payout = 10.0 * quantity
             pnl = round((10.0 - price_per_share) * quantity, 4)
             total_payout += payout
@@ -36,7 +58,7 @@ def settle_market(db, market_oid: ObjectId, winning_side: str) -> dict:
                 {"$inc": {"wallet": payout, "wins": 1}}
             )
         else:
-            # Loser: no wallet change (already deducted at trade time)
+            payout = 0.0
             pnl = round(-total_cost, 4)
             db.users.update_one(
                 {"_id": user_oid},
@@ -45,7 +67,7 @@ def settle_market(db, market_oid: ObjectId, winning_side: str) -> dict:
 
         db.trades.update_one(
             {"_id": trade["_id"]},
-            {"$set": {"status": "settled", "pnl": pnl}}
+            {"$set": {"status": "settled", "pnl": pnl, "payout": payout}}
         )
         settled_count += 1
 
@@ -57,4 +79,8 @@ def settle_market(db, market_oid: ObjectId, winning_side: str) -> dict:
         }}
     )
 
-    return {"settled_count": settled_count, "total_payout": round(total_payout, 2)}
+    return {
+        "already_settling": False,
+        "settled_count": settled_count,
+        "total_payout": round(total_payout, 2)
+    }

@@ -13,6 +13,16 @@ class Config:
     FLASK_ENV = os.environ.get("FLASK_ENV", "development")
 
     @staticmethod
+    def validate():
+        if Config.FLASK_ENV == "production":
+            if not Config.JWT_SECRET_KEY or Config.JWT_SECRET_KEY == "dev-secret-key":
+                raise RuntimeError(
+                    "FATAL: JWT_SECRET_KEY is unset or using the insecure default "
+                    "'dev-secret-key' while FLASK_ENV=production. Set a strong "
+                    "JWT_SECRET_KEY environment variable before deploying."
+                )
+
+    @staticmethod
     def cors_origins():
         """Return list of allowed CORS origins based on environment."""
         frontend = os.environ.get("FRONTEND_URL", "http://localhost:5173")

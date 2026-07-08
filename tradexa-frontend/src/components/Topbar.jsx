@@ -188,7 +188,7 @@ const Topbar = () => {
               {user?.name || "Trader"}
             </span>
             <span className="text-[10px] text-slate-500 leading-tight">
-              {user?.role === "admin" ? "Admin" : "Retail"}
+              {["super_admin", "ops_admin", "market_admin", "risk_admin"].includes(user?.role) ? "Admin" : "Retail"}
             </span>
           </div>
           <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-slate-500" />

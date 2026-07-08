@@ -3,34 +3,49 @@ import apiClient from "../api/client";
 
 export const AuthContext = createContext(null);
 
-const TOKEN_KEY = "tradexa_token";
 const USER_KEY = "tradexa_user";
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => window.sessionStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState(() => {
     const raw = window.sessionStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const persistAuth = (nextToken, nextUser) => {
-    if (nextToken) {
-      window.sessionStorage.setItem(TOKEN_KEY, nextToken);
-    } else {
-      window.sessionStorage.removeItem(TOKEN_KEY);
-    }
-    if (nextUser) {
-      window.sessionStorage.setItem(USER_KEY, JSON.stringify(nextUser));
-    } else {
+  const refreshMe = useCallback(async () => {
+    try {
+      const res = await apiClient.get("/auth/me");
+      if (res.data?.success) {
+        const nextUser = res.data.data.user;
+        setUser(nextUser);
+        window.sessionStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+      } else {
+        setUser(null);
+        window.sessionStorage.removeItem(USER_KEY);
+      }
+    } catch (err) {
+      setUser(null);
       window.sessionStorage.removeItem(USER_KEY);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const logout = useCallback(() => {
-    setToken(null);
-    setUser(null);
-    persistAuth(null, null);
+  useEffect(() => {
+    refreshMe();
+  }, [refreshMe]);
+
+  const logout = useCallback(async () => {
+    setLoading(true);
+    try {
+      await apiClient.post("/auth/logout");
+    } catch (err) {
+      // ignore logout failure, proceed to clear local state
+    } finally {
+      setUser(null);
+      window.sessionStorage.removeItem(USER_KEY);
+      setLoading(false);
+    }
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -38,11 +53,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await apiClient.post("/auth/login", { email, password });
       if (res.data?.success) {
-        const nextToken = res.data.data.token;
         const nextUser = res.data.data.user;
-        setToken(nextToken);
         setUser(nextUser);
-        persistAuth(nextToken, nextUser);
+        window.sessionStorage.setItem(USER_KEY, JSON.stringify(nextUser));
         return { success: true };
       }
       return { success: false, message: res.data?.message || "Login failed" };
@@ -62,11 +75,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await apiClient.post("/auth/register", { name, email, password });
       if (res.data?.success) {
-        const nextToken = res.data.data.token;
         const nextUser = res.data.data.user;
-        setToken(nextToken);
         setUser(nextUser);
-        persistAuth(nextToken, nextUser);
+        window.sessionStorage.setItem(USER_KEY, JSON.stringify(nextUser));
         return { success: true };
       }
       return { success: false, message: res.data?.message || "Registration failed" };
@@ -90,35 +101,18 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
-  const refreshMe = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await apiClient.get("/auth/me");
-      if (res.data?.success) {
-        setUser(res.data.data.user);
-        window.sessionStorage.setItem(USER_KEY, JSON.stringify(res.data.data.user));
-      }
-    } catch (err) {
-      // ignore
-    }
-  }, [token]);
-
-  useEffect(() => {
-    refreshMe();
-  }, [refreshMe]);
-
   const value = useMemo(
     () => ({
       user,
-      token,
-      isAuthenticated: Boolean(token && user),
+      isAuthenticated: Boolean(user),
       loading,
       login,
       logout,
       register,
       updateWallet,
+      refreshMe,
     }),
-    [user, token, loading, login, logout, register, updateWallet]
+    [user, loading, login, logout, register, updateWallet, refreshMe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

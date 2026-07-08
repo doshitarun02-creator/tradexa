@@ -16,6 +16,8 @@ import {
 import client from "../api/client";
 import Layout from "../components/Layout";
 import Toast from "../components/Toast";
+import Can from "../components/Can";
+import usePermissions from "../hooks/usePermissions";
 import { formatINR } from "../utils/formatters";
 
 function SettlementConfirmModal({ market, outcome, open, loading, onClose, onConfirm }) {
@@ -90,9 +92,9 @@ function SettlementConfirmModal({ market, outcome, open, loading, onClose, onCon
 }
 
 const TABS = [
-  { key: "markets", label: "Markets Manager", icon: Landmark },
-  { key: "users", label: "Users", icon: Users },
-  { key: "stats", label: "Platform Stats", icon: BarChart3 },
+  { key: "markets", label: "Markets Manager", icon: Landmark, perm: null },
+  { key: "users", label: "Users", icon: Users, perm: "users:view" },
+  { key: "stats", label: "Platform Stats", icon: BarChart3, perm: "stats:view" },
 ];
 
 const INITIAL_MARKET_FORM = {
@@ -125,6 +127,7 @@ function formatDateTime(value) {
 }
 
 export default function Admin() {
+  const { hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState("markets");
   const [search, setSearch] = useState("");
 
@@ -398,11 +401,16 @@ export default function Admin() {
   };
 
   const handleWalletAdjust = async (userId, operation) => {
-    const rawAmount = walletAmountByUser[userId];
-    const amount = Number(rawAmount);
+    const entry = walletAmountByUser[userId] || {};
+    const amount = Number(entry.amount);
+    const reason = (entry.reason || "").trim();
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setToast({ type: "error", message: "Enter a valid positive number." });
+      return;
+    }
+    if (reason.length < 5) {
+      setToast({ type: "error", message: "A reason (min 5 characters) is required." });
       return;
     }
 
@@ -411,9 +419,10 @@ export default function Admin() {
     try {
       await client.patch(`/admin/users/${userId}/wallet`, {
         amount,
-        operation, // set | add | subtract
+        operation, // add | subtract
+        reason,
       });
-      setWalletAmountByUser((prev) => ({ ...prev, [userId]: "" }));
+      setWalletAmountByUser((prev) => ({ ...prev, [userId]: { amount: "", reason: "" } }));
       setToast({ type: "success", message: `Wallet successfully modified.` });
       await Promise.all([loadUsers(), loadStats()]);
     } catch (error) {
@@ -479,7 +488,7 @@ export default function Admin() {
 
         {/* Tab Pills */}
         <section className="rounded-3xl border border-border bg-surface p-2 flex flex-wrap gap-1">
-          {TABS.map((tab) => {
+          {TABS.filter((tab) => !tab.perm || hasPermission(tab.perm)).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
@@ -504,7 +513,18 @@ export default function Admin() {
         {activeTab === "markets" ? (
           <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
             {/* Create Market Form */}
-            <div className="rounded-3xl border border-border bg-surface p-5 h-fit">
+            <Can
+              perm="markets:create"
+              fallback={
+                <div className="rounded-3xl border border-border bg-surface p-5 h-fit flex flex-col items-center justify-center text-center gap-2 py-10">
+                  <Shield className="h-6 w-6 text-slate-500" />
+                  <p className="text-xs text-slate-400">
+                    Your role does not have permission to create markets.
+                  </p>
+                </div>
+              }
+            >
+              <div className="rounded-3xl border border-border bg-surface p-5 h-fit">
               <div className="mb-4">
                 <h2 className="text-base font-bold text-slate-100">Create New Market</h2>
                 <p className="mt-1 text-xs text-slate-400">
@@ -658,6 +678,7 @@ export default function Admin() {
                 </button>
               </form>
             </div>
+            </Can>
 
             {/* Markets List Manager */}
             <div className="rounded-3xl border border-border bg-surface p-5">
@@ -711,31 +732,33 @@ export default function Admin() {
                             Settled: {String(market.winning_side || "—").toUpperCase()}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={selectedOutcomeByMarket[market.id] || ""}
-                              onChange={(event) =>
-                                setSelectedOutcomeByMarket((prev) => ({
-                                  ...prev,
-                                  [market.id]: event.target.value,
-                                }))
-                              }
-                              className="h-9 rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none transition focus:border-primary/40 cursor-pointer"
-                            >
-                              <option value="">Outcome</option>
-                              <option value="yes">YES</option>
-                              <option value="no">NO</option>
-                            </select>
+                          <Can perm="markets:settle">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={selectedOutcomeByMarket[market.id] || ""}
+                                onChange={(event) =>
+                                  setSelectedOutcomeByMarket((prev) => ({
+                                    ...prev,
+                                    [market.id]: event.target.value,
+                                  }))
+                                }
+                                className="h-9 rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none transition focus:border-primary/40 cursor-pointer"
+                              >
+                                <option value="">Outcome</option>
+                                <option value="yes">YES</option>
+                                <option value="no">NO</option>
+                              </select>
 
-                            <button
-                              type="button"
-                              onClick={() => openSettlementConfirm(market)}
-                              disabled={settlingMarketId === market.id}
-                              className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-xs font-bold text-slate-950 transition hover:bg-primary-strong disabled:opacity-50"
-                            >
-                              Resolve
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => openSettlementConfirm(market)}
+                                disabled={settlingMarketId === market.id}
+                                className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-xs font-bold text-slate-950 transition hover:bg-primary-strong disabled:opacity-50"
+                              >
+                                Resolve
+                              </button>
+                            </div>
+                          </Can>
                         )}
                       </div>
                     </div>
@@ -777,7 +800,7 @@ export default function Admin() {
                       <p className="text-sm font-semibold text-slate-200">{u.name || "Anonymous"}</p>
                       <p className="mt-0.5 truncate text-xs text-slate-400 font-mono">{u.email}</p>
                       <div className="mt-2.5 flex items-center gap-2 text-[9px] uppercase tracking-wider font-mono text-slate-500">
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${u.role === "admin" ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"}`}>{u.role}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${["super_admin", "ops_admin", "market_admin", "risk_admin"].includes(u.role) ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"}`}>{u.role}</span>
                         <span>•</span>
                         <span>Joined {formatDateTime(u.created_at)}</span>
                       </div>
@@ -790,39 +813,60 @@ export default function Admin() {
                       </p>
                     </div>
 
-                    <div className="flex flex-col gap-2 justify-center">
-                      <div className="flex gap-2">
+                    <Can
+                      perm="wallet:adjust"
+                      fallback={
+                        <div className="flex items-center justify-center text-[11px] text-slate-500 italic">
+                          No wallet permission
+                        </div>
+                      }
+                    >
+                      <div className="flex flex-col gap-2 justify-center">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={walletAmountByUser[u.id]?.amount || ""}
+                            onChange={(event) =>
+                              setWalletAmountByUser((prev) => ({
+                                ...prev,
+                                [u.id]: { ...prev[u.id], amount: event.target.value },
+                              }))
+                            }
+                            className="h-9 w-full rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none focus:border-primary/40"
+                            placeholder="Amount"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleWalletAdjust(u.id, "add")}
+                            disabled={walletLoadingUserId === u.id}
+                            className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-800 border border-border px-3 text-xs text-slate-200 hover:text-primary transition-colors disabled:opacity-50"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleWalletAdjust(u.id, "subtract")}
+                            disabled={walletLoadingUserId === u.id}
+                            className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-xs font-bold text-slate-950 transition hover:bg-primary-strong disabled:opacity-50"
+                          >
+                            Subtract
+                          </button>
+                        </div>
                         <input
-                          type="number"
-                          step="0.01"
-                          value={walletAmountByUser[u.id] || ""}
+                          type="text"
+                          value={walletAmountByUser[u.id]?.reason || ""}
                           onChange={(event) =>
                             setWalletAmountByUser((prev) => ({
                               ...prev,
-                              [u.id]: event.target.value,
+                              [u.id]: { ...prev[u.id], reason: event.target.value },
                             }))
                           }
                           className="h-9 w-full rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none focus:border-primary/40"
-                          placeholder="Amount"
+                          placeholder="Reason (required, min 5 chars)"
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleWalletAdjust(u.id, "add")}
-                          disabled={walletLoadingUserId === u.id}
-                          className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-800 border border-border px-3 text-xs text-slate-200 hover:text-primary transition-colors disabled:opacity-50"
-                        >
-                          Add
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleWalletAdjust(u.id, "set")}
-                          disabled={walletLoadingUserId === u.id}
-                          className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-xs font-bold text-slate-950 transition hover:bg-primary-strong disabled:opacity-50"
-                        >
-                          Set
-                        </button>
                       </div>
-                    </div>
+                    </Can>
                   </div>
                 ))}
               </div>

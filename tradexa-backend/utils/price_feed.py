@@ -1,6 +1,9 @@
 import requests
+import time
 from datetime import datetime, timezone
+from pymongo import ReturnDocument
 from flask import current_app
+from utils.logger import logger
 
 
 COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
@@ -96,12 +99,7 @@ def _fetch_forex() -> dict:
     return result
 
 
-def get_prices() -> dict:
-    db = current_app.db
-    cached = _get_cached_prices(db)
-    if cached:
-        return cached
-
+def fetch_external_prices():
     crypto = {}
     forex = {}
     crypto_error = None
@@ -127,7 +125,39 @@ def get_prices() -> dict:
     if forex_error:
         data["forex_error"] = forex_error
 
-    if crypto or forex:
-        _set_cached_prices(db, data)
-
     return data
+
+
+def get_prices(db, fetch_external_prices):
+    cached = db.price_cache.find_one({"_id": "prices"})
+    if cached and (datetime.now(timezone.utc) - cached["updated_at"].replace(tzinfo=timezone.utc)).total_seconds() < 30:
+        return cached["data"]
+
+    lock = db.cache_locks.find_one_and_update(
+        {"_id": "prices_lock"},
+        {"$setOnInsert": {"locked_at": datetime.now(timezone.utc)}},
+        upsert=True,
+        return_document=ReturnDocument.BEFORE,
+    )
+
+    if lock is not None:
+        for _ in range(3):
+            time.sleep(0.5)
+            cached = db.price_cache.find_one({"_id": "prices"})
+            if cached:
+                return cached["data"]
+        return cached["data"] if cached else {}
+
+    try:
+        data = fetch_external_prices()
+        db.price_cache.update_one(
+            {"_id": "prices"},
+            {"$set": {"data": data, "updated_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+        return data
+    except Exception as e:
+        logger.exception("price_feed error")
+        raise
+    finally:
+        db.cache_locks.delete_one({"_id": "prices_lock"})
