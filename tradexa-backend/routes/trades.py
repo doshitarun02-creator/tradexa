@@ -40,6 +40,9 @@ def place_trade():
     if not market:
         return api_response(False, {}, "Market not found", 404)
 
+    if market.get("status") == "paused":
+        return api_response(False, {}, "This market is paused and not accepting trades right now", 400)
+
     if market.get("status") != "live":
         return api_response(False, {}, "Market is not live", 400)
 

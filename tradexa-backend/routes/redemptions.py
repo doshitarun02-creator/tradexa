@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from models.redemption import create_redemption, serialize_redemption, is_valid_transition
 from schemas.redemption import CreateRedemptionSchema, ReviewRedemptionSchema, CompleteRedemptionSchema
 from services.points_service import debit_points, credit_points, InsufficientPointsError, UserNotFoundError, DuplicateLedgerEntryError
-from models.admin_audit import log_admin_action
+from models.audit import log_admin_action
 from utils.response import api_response
 from utils.permissions import require_permission
 from utils.pagination import parse_pagination, PaginationError

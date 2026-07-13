@@ -1,13 +1,24 @@
 from datetime import datetime, timezone
 
-def create_market(
-    question: str,
-    category: str,
-    icon: str,
-    price_symbol: str,
-    end_time: datetime,
-    b: float = 100.0,
-) -> dict:
+VALID_MARKET_STATUSES = ["draft", "upcoming", "live", "paused", "settling", "settled", "cancelled"]
+
+MARKET_TRANSITIONS = {
+    "draft": ["upcoming", "cancelled"],
+    "upcoming": ["live", "cancelled"],
+    "live": ["paused", "settling", "cancelled"],
+    "paused": ["live", "cancelled"],
+    "settling": ["settled"],
+    "settled": [],
+    "cancelled": [],
+}
+
+
+def is_valid_market_transition(current_status: str, next_status: str) -> bool:
+    return next_status in MARKET_TRANSITIONS.get(current_status, [])
+
+
+def create_market(question: str, category: str, icon: str, price_symbol: str,
+                   end_time: datetime, b: float = 100.0, publish_immediately: bool = False) -> dict:
     return {
         "question": question,
         "category": category,
@@ -20,11 +31,14 @@ def create_market(
         "b": b,
         "volume": 0.0,
         "traders": 0,
-        "status": "upcoming",
+        "version": 0,
+        "status": "upcoming" if publish_immediately else "draft",
         "winning_side": None,
+        "cancel_reason": None,
         "end_time": end_time,
         "created_at": datetime.now(timezone.utc),
     }
+
 
 def serialize_market(market: dict) -> dict:
     if not market:
@@ -42,8 +56,10 @@ def serialize_market(market: dict) -> dict:
         "b": market.get("b", 100.0),
         "volume": round(market.get("volume", 0.0), 2),
         "traders": market.get("traders", 0),
-        "status": market.get("status", "upcoming"),
+        "version": market.get("version", 0),
+        "status": market.get("status", "draft"),
         "winning_side": market.get("winning_side"),
+        "cancel_reason": market.get("cancel_reason"),
         "end_time": market.get("end_time").isoformat() if market.get("end_time") else None,
         "created_at": market.get("created_at").isoformat() if market.get("created_at") else None,
     }

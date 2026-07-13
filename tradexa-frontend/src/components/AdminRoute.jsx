@@ -20,7 +20,7 @@ const AdminRoute = ({ children }) => {
   }
 
   if (loading) {
-    return null;
+    return <div className="ot-route-loading">Checking access...</div>;
   }
 
   if (!isAnyAdmin) {

@@ -4,7 +4,8 @@ from bson import ObjectId
 from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
 
-from models.market import create_market, serialize_market
+from models.market import create_market, serialize_market, is_valid_market_transition
+from services.points_service import credit_points, DuplicateLedgerEntryError
 from utils.limiter import limiter
 from utils.response import api_response
 from utils.pagination import parse_pagination, PaginationError
@@ -221,3 +222,164 @@ def delete_market(market_id):
     except Exception as e:
         logger.exception("Market deletion failed")
         return api_response(False, {}, "Failed to delete market", 500)
+
+
+@markets_bp.route("/admin/markets/<market_id>/publish", methods=["POST"])
+@require_permission("markets:update")
+def publish_market(market_id):
+    """Moves a draft market to upcoming, making it visible to users."""
+    db = current_app.db
+    claims = get_jwt()
+    actor_id = get_jwt_identity()
+    try:
+        oid = ObjectId(market_id)
+    except Exception:
+        return api_response(False, {}, "Invalid market ID", 400)
+
+    market = db.markets.find_one({"_id": oid})
+    if not market:
+        return api_response(False, {}, "Market not found", 404)
+    if not is_valid_market_transition(market.get("status", "draft"), "upcoming"):
+        return api_response(False, {}, f"Cannot publish a market in '{market.get('status')}' status", 409)
+
+    db.markets.update_one({"_id": oid}, {"$set": {"status": "upcoming"}, "$inc": {"version": 1}})
+    updated = db.markets.find_one({"_id": oid})
+
+    log_admin_action(
+        db, actor_id=actor_id, actor_role=claims.get("role"), action="market_publish",
+        target_type="market", target_id=market_id,
+        before={"status": market.get("status", "draft")}, after={"status": "upcoming"}, metadata={}, **_client_meta(),
+    )
+    return api_response(True, {"market": serialize_market(updated)}, "Market published")
+
+
+@markets_bp.route("/admin/markets/<market_id>/pause", methods=["POST"])
+@require_permission("markets:pause")
+def pause_market(market_id):
+    db = current_app.db
+    claims = get_jwt()
+    actor_id = get_jwt_identity()
+    body = request.get_json(silent=True) or {}
+    reason = (body.get("reason") or "").strip()
+
+    try:
+        oid = ObjectId(market_id)
+    except Exception:
+        return api_response(False, {}, "Invalid market ID", 400)
+
+    market = db.markets.find_one({"_id": oid})
+    if not market:
+        return api_response(False, {}, "Market not found", 404)
+    if not is_valid_market_transition(market.get("status", "draft"), "paused"):
+        return api_response(False, {}, f"Cannot pause a market in '{market.get('status')}' status", 409)
+
+    db.markets.update_one({"_id": oid}, {"$set": {"status": "paused"}, "$inc": {"version": 1}})
+    updated = db.markets.find_one({"_id": oid})
+
+    log_admin_action(
+        db, actor_id=actor_id, actor_role=claims.get("role"), action="market_pause",
+        target_type="market", target_id=market_id,
+        before={"status": market.get("status")}, after={"status": "paused"}, metadata={"reason": reason}, **_client_meta(),
+    )
+    return api_response(True, {"market": serialize_market(updated)}, "Market paused. Trading is now blocked.")
+
+
+@markets_bp.route("/admin/markets/<market_id>/resume", methods=["POST"])
+@require_permission("markets:pause")
+def resume_market(market_id):
+    db = current_app.db
+    claims = get_jwt()
+    actor_id = get_jwt_identity()
+
+    try:
+        oid = ObjectId(market_id)
+    except Exception:
+        return api_response(False, {}, "Invalid market ID", 400)
+
+    market = db.markets.find_one({"_id": oid})
+    if not market:
+        return api_response(False, {}, "Market not found", 404)
+    if not is_valid_market_transition(market.get("status", "draft"), "live"):
+        return api_response(False, {}, f"Cannot resume a market in '{market.get('status')}' status", 409)
+
+    db.markets.update_one({"_id": oid}, {"$set": {"status": "live"}, "$inc": {"version": 1}})
+    updated = db.markets.find_one({"_id": oid})
+
+    log_admin_action(
+        db, actor_id=actor_id, actor_role=claims.get("role"), action="market_resume",
+        target_type="market", target_id=market_id,
+        before={"status": market.get("status")}, after={"status": "live"}, metadata={}, **_client_meta(),
+    )
+    return api_response(True, {"market": serialize_market(updated)}, "Market resumed. Trading is now live.")
+
+
+@markets_bp.route("/admin/markets/<market_id>/cancel", methods=["POST"])
+@require_permission("markets:delete")
+def cancel_market(market_id):
+    """
+    Cancels a market and refunds every open trade's points via the ledger.
+    Only allowed from draft/upcoming/live/paused — never from settled.
+    """
+    db = current_app.db
+    claims = get_jwt()
+    actor_id = get_jwt_identity()
+    body = request.get_json(silent=True) or {}
+    reason = (body.get("reason") or "").strip()
+
+    if not reason or len(reason) < 5:
+        return api_response(False, {}, "A cancellation reason (min 5 characters) is required", 400)
+
+    try:
+        oid = ObjectId(market_id)
+    except Exception:
+        return api_response(False, {}, "Invalid market ID", 400)
+
+    market = db.markets.find_one({"_id": oid})
+    if not market:
+        return api_response(False, {}, "Market not found", 404)
+    if not is_valid_market_transition(market.get("status", "draft"), "cancelled"):
+        return api_response(False, {}, f"Cannot cancel a market in '{market.get('status')}' status", 409)
+
+    locked_market = db.markets.find_one_and_update(
+        {"_id": oid, "status": market["status"]},
+        {"$set": {"status": "cancelled", "cancel_reason": reason}, "$inc": {"version": 1}},
+        return_document=True,
+    )
+    if locked_market is None:
+        return api_response(False, {}, "Market status changed concurrently, please retry", 409)
+
+    open_trades = list(db.trades.find({
+        "$or": [{"market_id": oid}, {"market_id": str(oid)}],
+        "status": "open",
+    }))
+
+    refunded_count = 0
+    for trade in open_trades:
+        claimed = db.trades.find_one_and_update(
+            {"_id": trade["_id"], "status": "open"},
+            {"$set": {"status": "cancelled", "pnl": 0.0, "payout": trade.get("total_cost", 0.0)}},
+            return_document=True,
+        )
+        if claimed is None:
+            continue
+        try:
+            credit_points(
+                db, user_id=trade["user_id"], amount=trade.get("total_cost", 0.0), actor_id=actor_id,
+                reason=f"Market {market_id} cancelled: {reason}",
+                entry_type="refund",
+                reference_type="trade", reference_id=f"{trade['_id']}-cancel-refund",
+            )
+            refunded_count += 1
+        except DuplicateLedgerEntryError:
+            pass
+
+    log_admin_action(
+        db, actor_id=actor_id, actor_role=claims.get("role"), action="market_cancel",
+        target_type="market", target_id=market_id,
+        before={"status": market["status"]}, after={"status": "cancelled"},
+        metadata={"reason": reason, "refunded_trades": refunded_count}, **_client_meta(),
+    )
+    return api_response(True, {
+        "market": serialize_market(locked_market),
+        "refunded_trades": refunded_count,
+    }, "Market cancelled and open trades refunded")
