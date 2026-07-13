@@ -1,44 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Sparkles } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import useMarkets from "../hooks/useMarkets";
-import MarketCard from "../components/MarketCard";
-import SkeletonCard from "../components/SkeletonCard";
+import useAuth from "../hooks/useAuth";
 import TradeModal from "../components/TradeModal";
-import { formatINR } from "../utils/formatters";
-import apiClient from "../api/client";
-
-const CATEGORY_TABS = [
-  { key: "All", label: "All" },
-  { key: "Crypto", label: "₿ Crypto" },
-  { key: "Forex", label: "💱 Forex" },
-  { key: "Macro", label: "🌍 Macro" },
-  { key: "Stocks", label: "📊 Stocks" },
-  { key: "Commodities", label: "🥇 Commodities" },
-];
+import { formatINR, formatTimeLeft } from "../utils/formatters";
 
 const Markets = () => {
-  const {
-    markets,
-    loading,
-    category,
-    setCategory,
-    refresh,
-  } = useMarkets("live");
+  const location = useLocation();
+  const { user } = useAuth();
+  const isListView = location.search.includes("view=list");
 
+  const { markets, loading, category, setCategory, refresh } = useMarkets("live");
   const [search, setSearch] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [stats, setStats] = useState({ totalVolume: 0, liveCount: 0, tradersToday: 0 });
   const [selectedMarket, setSelectedMarket] = useState(null);
   const [selectedSide, setSelectedSide] = useState("yes");
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(search.trim().toLowerCase());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
+  // Poll for live market updates every 30s
   useEffect(() => {
     const interval = setInterval(() => {
       refresh();
@@ -46,35 +24,13 @@ const Markets = () => {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await apiClient.get("/admin/stats");
-        if (res.data?.success) {
-          setStats({
-            totalVolume: res.data.data.total_volume || 0,
-            liveCount: res.data.data.live_markets || 0,
-            tradersToday: res.data.data.total_users || 0, // proxy until we have daily traders
-          });
-        }
-      } catch {
-        // silent
-      }
-    };
-    fetchStats();
-  }, []);
-
   const filteredMarkets = useMemo(() => {
     return markets.filter((m) => {
-      if (debounced && !m.question.toLowerCase().includes(debounced)) {
-        return false;
-      }
-      if (category && category !== "All" && m.category !== category) {
-        return false;
-      }
-      return true;
+      const qMatch = m.question.toLowerCase().includes(search.trim().toLowerCase());
+      const cMatch = category === "All" || m.category === category;
+      return qMatch && cMatch;
     });
-  }, [markets, debounced, category]);
+  }, [markets, search, category]);
 
   const handleTrade = (market, side) => {
     setSelectedMarket(market);
@@ -82,104 +38,145 @@ const Markets = () => {
     setModalOpen(true);
   };
 
-  const handleTradeSuccess = () => {
-    refresh();
-  };
+  const walletBalance = user?.wallet ? Number(user.wallet).toLocaleString("en-IN") : "0";
 
+  if (isListView) {
+    // -------------------------------------------------------------
+    // RENDER: market-3.html (Markets List View)
+    // -------------------------------------------------------------
+    return (
+      <div>
+        <header className="ot-header">
+          <b>Markets</b>
+          <span>Balance ₹{walletBalance}</span>
+        </header>
+
+        {/* Scrolling Category Tabs */}
+        <div className="ot-tabs">
+          <div className={category === "All" ? "active" : ""} onClick={() => setCategory("All")}>All</div>
+          <div className={category === "Crypto" ? "active" : ""} onClick={() => setCategory("Crypto")}>Crypto</div>
+          <div className={category === "Forex" ? "active" : ""} onClick={() => setCategory("Forex")}>Forex</div>
+          <div className={category === "Macro" ? "active" : ""} onClick={() => setCategory("Macro")}>Macro</div>
+          <div className={category === "Stocks" ? "active" : ""} onClick={() => setCategory("Stocks")}>Stocks</div>
+        </div>
+
+        {/* Markets list */}
+        <div className="ot-sec">
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Loading markets...</div>
+          ) : filteredMarkets.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No active markets found.</div>
+          ) : (
+            filteredMarkets.map((market) => {
+              const yesPrice = market.yes_price ?? 5;
+              const noPrice = market.no_price ?? 5;
+              return (
+                <div className="ot-market" key={market.id}>
+                  <span className="ot-badge">LIVE</span>
+                  <h3>{market.question}</h3>
+                  <p>{market.category} • Ends in {formatTimeLeft(market.end_time)}</p>
+                  <div className="ot-row-flex">
+                    <div className="ot-market-btn ot-yes-btn" onClick={() => handleTrade(market, "yes")}>
+                      YES ₹{yesPrice.toFixed(1)}
+                    </div>
+                    <div className="ot-market-btn ot-no-btn" onClick={() => handleTrade(market, "no")}>
+                      NO ₹{noPrice.toFixed(1)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+
+
+        <TradeModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          market={selectedMarket}
+          initialSide={selectedSide}
+          onSuccess={refresh}
+        />
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: index-3.html (Home View)
+  // -------------------------------------------------------------
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/40">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Live markets
-            </div>
-            <div className="text-sm text-slate-100">
-              Trade your macro and crypto views in one terminal.
-            </div>
-          </div>
-        </div>
+    <div>
+      <header className="ot-header">
+        <div className="ot-logo">Tradexa</div>
+        <div>₹{walletBalance}</div>
+      </header>
 
-        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-          <span className="rounded-full bg-slate-900/70 border border-slate-700 px-2.5 py-1">
-            {stats.liveCount} live markets
-          </span>
-          <span className="rounded-full bg-slate-900/70 border border-slate-700 px-2.5 py-1">
-            {formatINR(stats.totalVolume)} total volume
-          </span>
-          <span className="rounded-full bg-slate-900/70 border border-slate-700 px-2.5 py-1">
-            {stats.tradersToday} traders today
-          </span>
-        </div>
+      {/* Search Input */}
+      <div className="ot-search">
+        <input
+          placeholder="Search Markets"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5 text-xs">
-          {CATEGORY_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setCategory(tab.key)}
-              className={`px-2.5 py-1.5 rounded-full border text-[11px] ${
-                category === tab.key
-                  ? "border-primary/80 bg-primary/10 text-primary"
-                  : "border-border bg-slate-900/70 text-slate-300 hover:border-slate-600"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="w-full md:w-64 relative">
-          <Search className="h-4 w-4 text-slate-500 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Search markets…"
-            className="w-full rounded-lg bg-slate-950/70 border border-border pl-9 pr-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-primary/60"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+      {/* Scrolling Category Tabs */}
+      <div className="ot-tabs">
+        <div className={category === "All" ? "active" : ""} onClick={() => setCategory("All")}>All</div>
+        <div className={category === "Crypto" ? "active" : ""} onClick={() => setCategory("Crypto")}>Crypto</div>
+        <div className={category === "Forex" ? "active" : ""} onClick={() => setCategory("Forex")}>Forex</div>
+        <div className={category === "Macro" ? "active" : ""} onClick={() => setCategory("Macro")}>Macro</div>
+        <div className={category === "Stocks" ? "active" : ""} onClick={() => setCategory("Stocks")}>Stocks</div>
       </div>
 
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mt-2">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <SkeletonCard key={idx} />
-          ))}
-        </div>
-      )}
+      {/* Wallet Card */}
+      <div className="ot-wallet-card">
+        <h3 style={{ margin: 0, fontWeight: "normal", fontSize: "14px", opacity: 0.9 }}>Wallet Balance</h3>
+        <h1 style={{ margin: "5px 0 0", fontSize: "30px", fontWeight: "bold" }}>₹{walletBalance}.00</h1>
+      </div>
 
-      {!loading && filteredMarkets.length === 0 && (
-        <div className="mt-10 flex flex-col items-center justify-center text-center text-slate-400">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/40 mb-3">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div className="text-sm font-medium text-slate-100 mb-1">No markets found</div>
-          <div className="text-xs text-slate-500">
-            Try adjusting filters or check back when new questions go live.
-          </div>
-        </div>
-      )}
+      {/* Markets Cards Grid */}
+      <div style={{ paddingBottom: "10px" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Loading markets...</div>
+        ) : filteredMarkets.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>No active markets found.</div>
+        ) : (
+          filteredMarkets.map((market) => {
+            const yesPrice = market.yes_price ?? 5;
+            const noPrice = market.no_price ?? 5;
+            const yesProb = Math.round((yesPrice / 10) * 100);
+            const noProb = 100 - yesProb;
 
-      {!loading && filteredMarkets.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mt-2">
-          {filteredMarkets.map((m) => (
-            <MarketCard key={m.id} market={m} onTrade={handleTrade} />
-          ))}
-        </div>
-      )}
+            return (
+              <div className="ot-card" key={market.id}>
+                <div className="ot-title">{market.question}</div>
+                <div className="ot-info">
+                  {market.category} • Ends in {formatTimeLeft(market.end_time)}
+                </div>
+                <div className="ot-odds">
+                  <div className="ot-btn ot-blue" onClick={() => handleTrade(market, "yes")}>YES</div>
+                  <div className="ot-btn ot-pink" onClick={() => handleTrade(market, "no")}>NO</div>
+                  <div className="ot-btn ot-blue" onClick={() => handleTrade(market, "yes")}>{yesProb}%</div>
+                  <div className="ot-btn ot-pink" onClick={() => handleTrade(market, "no")}>{noProb}%</div>
+                  <div className="ot-btn ot-blue" onClick={() => handleTrade(market, "yes")}>BUY</div>
+                  <div className="ot-btn ot-pink" onClick={() => handleTrade(market, "no")}>SELL</div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+
 
       <TradeModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         market={selectedMarket}
         initialSide={selectedSide}
-        onSuccess={handleTradeSuccess}
+        onSuccess={refresh}
       />
     </div>
   );

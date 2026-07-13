@@ -5,11 +5,11 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-background text-slate-100 font-sans antialiased;
+  @apply bg-background text-slate-800 font-sans antialiased;
 }
 
 /* Scrollbar styling */
@@ -18,12 +18,499 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
+  background: #cbd5e1;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #94a3b8;
+}
+
+/* TRADEXA 100% MATCH CSS OVERRIDES */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif !important;
+  background: #f2f4f8 !important;
+  padding-bottom: 80px;
+}
+
+/* Header */
+.ot-header {
+  background: #0b6fa4;
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ot-logo {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* Search bar */
+.ot-search {
+  padding: 10px;
+  background: #fff;
+}
+
+.ot-search input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Tabs */
+.ot-tabs {
+  display: flex;
+  overflow: auto;
+  background: #fff;
+}
+
+.ot-tabs div {
+  padding: 12px 18px;
+  white-space: nowrap;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ot-tabs .active {
+  color: #0b6fa4;
+  border-bottom: 3px solid #0b6fa4;
+}
+
+/* Cards */
+.ot-card {
+  background: #fff;
+  margin: 12px;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.ot-title {
+  font-weight: bold;
+  font-size: 18px;
+  color: #222;
+}
+
+.ot-info {
+  color: #666;
+  font-size: 13px;
+  margin: 6px 0 12px;
+}
+
+.ot-odds {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.ot-btn {
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ot-blue {
+  background: #8fd0ff;
+  color: #000;
+}
+
+.ot-pink {
+  background: #ffc1d5;
+  color: #000;
+}
+
+.ot-wallet-card {
+  margin: 12px;
+  background: #0b6fa4;
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.ot-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  z-index: 50;
+}
+
+.ot-bottom-nav a {
+  text-decoration: none;
+  color: #333;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Market specific classes */
+.ot-sec {
+  padding: 12px;
+}
+
+.ot-market {
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.ot-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.ot-row-flex {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ot-market-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ot-yes-btn {
+  background: #8fd0ff;
+  color: #000;
+}
+
+.ot-no-btn {
+  background: #ffc1d5;
+  color: #000;
+}
+
+.ot-badge {
+  display: inline-block;
+  background: #e53935;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Wallet page classes */
+.ot-container {
+  padding: 15px;
+}
+
+.ot-balance {
+  font-size: 34px;
+  font-weight: bold;
+  color: #0b6fa4;
+}
+
+.ot-sub {
+  color: #666;
+}
+
+.ot-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.ot-action-btn {
+  padding: 14px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+  color: #fff;
+  text-decoration: none;
+}
+
+.ot-deposit-btn {
+  background: #28a745;
+}
+
+.ot-withdraw-btn {
+  background: #dc3545;
+}
+
+.ot-history-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.ot-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.ot-credit {
+  color: green;
+  font-weight: bold;
+}
+
+.ot-debit {
+  color: red;
+  font-weight: bold;
+}
+
+/* Profile page classes */
+.ot-wrap {
+  padding: 16px;
+}
+
+.ot-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ot-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #0b6fa4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: bold;
+}
+
+.ot-name {
+  font-size: 22px;
+  font-weight: bold;
+  color: #000;
+}
+
+.ot-id-label {
+  color: #666;
+}
+
+.ot-menu-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.ot-menu-a {
+  display: block;
+  text-decoration: none;
+  color: #222;
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+  font-weight: bold;
+}
+
+.ot-logout-btn {
+  display: block;
+  background: #dc3545;
+  color: #fff;
+  text-align: center;
+  padding: 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  margin-top: 16px;
+  font-weight: bold;
+}
+
+/* Withdraw page classes */
+.ot-withdraw-label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: bold;
+  color: #000;
+}
+
+.ot-withdraw-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.ot-withdraw-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.ot-withdraw-button {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ot-note {
+  font-size: 13px;
+  color: #666;
+  margin-top: 10px;
+}
+
+/* History page boxes */
+.ot-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ot-summary-box {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.08);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.ot-summary-box h2 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.ot-win-text {
+  color: green;
+  font-weight: bold;
+}
+
+.ot-loss-text {
+  color: red;
+  font-weight: bold;
+}
+
+/* Login/Signup Overrides */
+.ot-auth-body {
+  background: #eef3f8 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.ot-auth-card {
+  width: 360px;
+  max-width: 95%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+.ot-auth-logo {
+  text-align: center;
+  font-size: 30px;
+  font-weight: bold;
+  color: #0b6fa4;
+  margin-bottom: 80px;
+}
+
+.ot-auth-sub {
+  text-align: center;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.ot-auth-label {
+  display: block;
+  margin: 14px 0 6px;
+  font-weight: bold;
+  color: #000;
+}
+
+.ot-auth-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.ot-auth-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.ot-auth-button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  background: #0b6fa4;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.ot-auth-links {
+  text-align: center;
+  margin-top: 18px;
+}
+
+.ot-auth-links a {
+  text-decoration: none;
+  color: #0b6fa4;
+}
+
+.ot-auth-social {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ot-auth-social button {
+  margin: 0;
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* FORCE ALL TEXT COLOR TO BLACK OVERRIDE */
+body, div, p, span, h1, h2, h3, h4, h5, h6, a, input, select, b, small, label, button, header, option, nav {
+  color: #000000 !important;
 }

@@ -1,0 +1,1 @@
+I will modify `src/App.jsx` to import and render our new admin page instead of the old stub.

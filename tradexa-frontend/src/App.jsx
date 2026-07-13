@@ -13,6 +13,9 @@ import Leaderboard from "./pages/Leaderboard";
 import Activity from "./pages/Activity";
 import News from "./pages/News";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
+import Wallet from "./pages/Wallet";
+import Withdraw from "./pages/Withdraw";
 import { PermissionProvider } from "./context/PermissionContext";
 
 const RouteTransition = ({ children }) => (
@@ -111,6 +114,30 @@ const AnimatedRoutes = () => {
             element={
               <RouteTransition>
                 <News />
+              </RouteTransition>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RouteTransition>
+                <Profile />
+              </RouteTransition>
+            }
+          />
+          <Route
+            path="/wallet"
+            element={
+              <RouteTransition>
+                <Wallet />
+              </RouteTransition>
+            }
+          />
+          <Route
+            path="/withdraw"
+            element={
+              <RouteTransition>
+                <Withdraw />
               </RouteTransition>
             }
           />

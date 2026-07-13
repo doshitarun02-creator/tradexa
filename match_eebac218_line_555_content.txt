@@ -1,0 +1,1 @@
+I will create the new admin page at `src/pages/Admin.jsx` using the provided implementation.

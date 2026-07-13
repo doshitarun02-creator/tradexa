@@ -5,9 +5,9 @@ import usePrices from "../hooks/usePrices";
 
 const getSentiment = (yesPrice) => {
   const yesProb = (yesPrice / 10) * 100;
-  if (yesProb > 60) return { label: "🐂 Bullish", color: "text-emerald-400 bg-emerald-500/10" };
-  if (yesProb < 40) return { label: "🐻 Bearish", color: "text-red-400 bg-red-500/10" };
-  return { label: "⚖️ Neutral", color: "text-slate-300 bg-slate-700/40" };
+  if (yesProb > 60) return { label: "🐂 Bullish", color: "text-green-600 bg-green-50" };
+  if (yesProb < 40) return { label: "🐻 Bearish", color: "text-red-600 bg-red-50" };
+  return { label: "⚖️ Neutral", color: "text-slate-600 bg-slate-100" };
 };
 
 const MarketCard = ({ market, onTrade }) => {
@@ -26,12 +26,12 @@ const MarketCard = ({ market, onTrade }) => {
 
   const timeColor =
     timeLeftLabel === "Ended"
-      ? "text-red-400"
+      ? "text-red-500"
       : timeLeftHours <= 1
-      ? "text-red-400"
+      ? "text-red-500"
       : timeLeftHours <= 24
-      ? "text-gold"
-      : "text-slate-400";
+      ? "text-amber-600 font-medium"
+      : "text-slate-500";
 
   const livePriceChip = useMemo(() => {
     if (!market.price_symbol) return null;
@@ -50,11 +50,11 @@ const MarketCard = ({ market, onTrade }) => {
       const { inr, change24h } = priceData;
       const sign = change24h > 0 ? "▲" : change24h < 0 ? "▼" : "";
       const changeClass =
-        change24h > 0 ? "text-emerald-300" : change24h < 0 ? "text-red-300" : "text-slate-200";
+        change24h > 0 ? "text-green-600" : change24h < 0 ? "text-red-600" : "text-slate-500";
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gold/10 border border-gold/50 text-[11px] font-mono text-gold">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-250 text-[11px] font-mono text-amber-700">
           {symbol}{" "}
-          <span className="text-slate-100">
+          <span className="text-slate-800 font-semibold">
             {inr ? `₹${inr.toLocaleString("en-IN")}` : "—"}
           </span>
           {sign && (
@@ -70,8 +70,8 @@ const MarketCard = ({ market, onTrade }) => {
     if (priceData.type === "forex") {
       const { value } = priceData;
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gold/10 border border-gold/50 text-[11px] font-mono text-gold">
-          {symbol} <span className="text-slate-100">{value ? value.toFixed(4) : "—"}</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-250 text-[11px] font-mono text-amber-700">
+          {symbol} <span className="text-slate-800 font-semibold">{value ? value.toFixed(4) : "—"}</span>
         </span>
       );
     }
@@ -91,53 +91,52 @@ const MarketCard = ({ market, onTrade }) => {
   return (
     <div
       onClick={() => navigate(`/markets/${market.id}`)}
-      className="group rounded-xl border border-border bg-surface/80 shadow-soft-lg transition-transform duration-150 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[0_18px_45px_rgba(0,0,0,0.75)] cursor-pointer"
+      className="rounded-[10px] border border-slate-200 bg-surface shadow-[0_2px_4px_rgba(0,0,0,0.06)] hover:shadow-md hover:border-primary/30 transition-all duration-150 cursor-pointer"
     >
-      <div className="p-3 sm:p-4 space-y-3">
+      <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center text-lg">
+            <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">
               {market.icon || "📊"}
             </div>
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/80 border border-slate-700 text-[10px] text-slate-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span>{market.category}</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e53935] text-[10px] text-white font-bold uppercase select-none">
+                <span>LIVE</span>
               </div>
               <div className={`text-[11px] ${timeColor}`}>{timeLeftLabel}</div>
             </div>
           </div>
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border border-slate-700/80 ${sentiment.color}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border border-slate-200 ${sentiment.color}`}
           >
             {sentiment.label}
           </span>
         </div>
 
-        <div className="text-sm font-medium text-slate-50 line-clamp-2">
+        <div className="text-[15px] font-bold text-slate-800 line-clamp-2">
           {market.question}
         </div>
 
-        {livePriceChip && <div className="pt-1">{livePriceChip}</div>}
+        {livePriceChip && <div className="pt-0.5">{livePriceChip}</div>}
 
         <div className="mt-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-semibold">
             <span>YES {yesProb}%</span>
             <span>NO {noProb}%</span>
           </div>
-          <div className="h-2.5 rounded-full bg-slate-900 overflow-hidden flex">
+          <div className="h-2 rounded-full bg-slate-100 overflow-hidden flex">
             <div
-              className="h-full bg-yes/80"
+              className="h-full bg-yes"
               style={{ width: `${yesProb}%` }}
             />
             <div
-              className="h-full bg-no/80"
+              className="h-full bg-no"
               style={{ width: `${noProb}%` }}
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+        <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 font-medium">
           <span>📊 {formatINR(market.volume || 0)} vol</span>
           <span>👥 {market.traders || 0} traders</span>
         </div>
@@ -146,16 +145,16 @@ const MarketCard = ({ market, onTrade }) => {
           <button
             type="button"
             onClick={onYes}
-            className="flex-1 inline-flex items-center justify-center rounded-lg bg-yes/90 hover:bg-yes text-slate-950 text-xs font-semibold py-2 transition-colors"
+            className="flex-1 inline-flex items-center justify-center rounded-[8px] bg-yes hover:bg-yes/80 text-slate-800 text-xs font-bold py-2.5 transition-colors border border-primary/10"
           >
-            YES ₹{yesPrice.toFixed(2)}
+            YES ₹{yesPrice.toFixed(1)}
           </button>
           <button
             type="button"
             onClick={onNo}
-            className="flex-1 inline-flex items-center justify-center rounded-lg bg-no/90 hover:bg-no text-slate-50 text-xs font-semibold py-2 transition-colors"
+            className="flex-1 inline-flex items-center justify-center rounded-[8px] bg-no hover:bg-no/80 text-slate-800 text-xs font-bold py-2.5 transition-colors border border-primary/10"
           >
-            NO ₹{noPrice.toFixed(2)}
+            NO ₹{noPrice.toFixed(1)}
           </button>
         </div>
       </div>

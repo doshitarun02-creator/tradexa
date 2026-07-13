@@ -1,0 +1,1 @@
+I will update `task.md` to add the frontend page task and mark it as completed.

@@ -1,0 +1,138 @@
+<USER_REQUEST>
+Purpose
+Admin-only dashboard page with market management, users, and stats tabs.
+
+Files in this chunk
+src/pages/Admin.jsx
+
+Dependency
+Depends on Layout.jsx, api/client.js, and ProtectedRoute already enforcing admin-only access.
+
+Assumptions
+- GET /markets is available for market listing in admin manager.
+- GET /admin/users returns data.users and GET /admin/stats returns data.stats.
+- PATCH /admin/markets/:id/settle expects { resolved_outcome } and PATCH /admin/users/:id/wallet expects { amount }.
+
+src/pages/Admin.jsx
+```jsx
+import { motion } from "framer-motion";
+import {
+  BarChart3,
+  CheckCircle2,
+  CircleDollarSign,
+  Landmark,
+  Plus,
+  RefreshCcw,
+  Shield,
+  Users,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import client from "../api/client";
+import Layout from "../components/Layout";
+import Toast from "../components/Toast";
+
+const TABS = [
+  { key: "markets", label: "Markets manager", icon: Landmark },
+  { key: "users", label: "Users", icon: Users },
+  { key: "stats", label: "Stats", icon: BarChart3 },
+];
+
+const INITIAL_MARKET_FORM = {
+  question: "",
+  category: "",
+  icon: "📈",
+  yes_pool: "500",
+  no_pool: "500",
+  end_time: "",
+};
+
+function extractMessage(error, fallback) {
+  return (
+    error?.response?.data?.message ||
+    error?.message ||
+    fallback
+  );
+}
+
+function formatCurrency(value) {
+  return `₹ ${Number(value || 0).toFixed(2)}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getMarketsPayload(responseData) {
+  const root = responseData?.data ?? responseData ?? {};
+  return root.markets || [];
+}
+
+function getUsersPayload(responseData) {
+  const root = responseData?.data ?? responseData ?? {};
+  return root.users || [];
+}
+
+function getS
+<truncated 30212 bytes>
+>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-surface p-5">
+                <h3 className="text-lg font-semibold text-foreground">Trades overview</h3>
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-2xl border border-white/10 bg-background-elevated p-4">
+                    <p className="text-sm text-foreground-muted">Total trades</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">
+                      {stats?.trades?.total ?? 0}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-background-elevated p-4">
+                    <p className="text-sm text-foreground-muted">Open trades</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">
+                      {stats?.trades?.open ?? 0}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-background-elevated p-4">
+                    <p className="text-sm text-foreground-muted">Total P&amp;L</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">
+                      {formatCurrency(stats?.trades?.total_pnl ?? 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
+      </div>
+
+      <Toast
+        open={Boolean(toast)}
+        type={toast?.type}
+        message={toast?.message}
+        onClose={() => setToast(null)}
+      />
+    </Layout>
+  );
+}
+```
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-04T04:22:21+05:30.
+
+The user's current state is as follows:
+Active Document: d:\traderpulse\src\components\Layout.jsx (LANGUAGE_JAVASCRIPT)
+Cursor is on line: 1
+Other open documents:
+- d:\traderpulse\src\components\Layout.jsx (LANGUAGE_JAVASCRIPT)
+</ADDITIONAL_METADATA>

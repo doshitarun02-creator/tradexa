@@ -5,13 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#0a0e1a",
-        surface: "#111827",
-        border: "#1f2937",
-        primary: "#00d4aa",
-        yes: "#00d97e",
-        no: "#ff4d6d",
-        gold: "#f5c842",
+        background: "#f4f6f9",
+        surface: "#ffffff",
+        border: "#e2e8f0",
+        primary: "#0b6fa4",
+        yes: "#8fd0ff",
+        no: "#ffc1d5",
+        gold: "#fbbf24",
       },
       fontFamily: {
         mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],

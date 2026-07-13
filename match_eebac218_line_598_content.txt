@@ -1,0 +1,101 @@
+Created At: 2026-06-03T23:02:41Z
+Completed At: 2026-06-03T23:02:43Z
+
+				The command completed successfully.
+				Output:
+				<truncated 11 lines>
+⠀⠉⠲⣶⣶⢾⣉⣐⡚⠋⠀⠀⠀⠀⠀⠘⠀⠀⡎⣿⣿⡇
+⠀⠀⠀⠀⠀⣸⣿⣿⣿⣷⡄⠀⠀⢠⣿⣴⠀⠀⣿⣿⣿⣧
+⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⠇⠀⢠⠟⣿⠏⢀⣾⠟⢸⣿⡇
+⠀⠀⢠⣿⣿⣿⣿⠟⠘⠁⢠⠜⢉⣐⡥⠞⠋⢁⣴⣿⣿⠃
+⠀⠀⣾⢻⣿⣿⠃⠀⠀⡀⢀⡄⠁⠀⠀⢠⡾
+⠀⠀⠃⢸⣿⡇⠀⢠⣾⡇⢸⡇⠀⠀⠀⡞
+⠀⠀⠀⠈⢿⡇⡰⠋⠈⠙⠂⠙⠢
+⠀⠀⠀⠀⠈⢧
+
+
+shraw@Spector
+
+ Windows 11 Home Single Language (25H2) x86_64
+ AMD Ryzen 9 270 (16) @ 5.25 GHz
+󰚗 GA403UM (1.0)
+ 11.96 GiB / 15.29 GiB (78%)
+ 400.62 GiB / 423.58 GiB (95%) - NTFS
+ 340.77 GiB / 500.00 GiB (68%) - NTFS
+
+● ● ● ● ● ● ● ●
+
+
+
+
+
+
+
+
+
+
+Initialized empty Git repository in D:/traderpulse/.git/
+warning: in the working copy of '.env.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'config.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'models/market.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'models/trade.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'models/user.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced b
+<truncated 4202 bytes>
+l be replaced by CRLF the next time Git touches it
+[main (root-commit) 7cffa16] Initial commit
+ 48 files changed, 8509 insertions(+)
+ create mode 100644 .env.example
+ create mode 100644 .gitignore
+ create mode 100644 README.md
+ create mode 100644 app.py
+ create mode 100644 config.py
+ create mode 100644 index.html
+ create mode 100644 models/market.py
+ create mode 100644 models/trade.py
+ create mode 100644 models/user.py
+ create mode 100644 package-lock.json
+ create mode 100644 package.json
+ create mode 100644 requirements.txt
+ create mode 100644 routes/admin.py
+ create mode 100644 routes/auth.py
+ create mode 100644 routes/markets.py
+ create mode 100644 routes/trades.py
+ create mode 100644 routes/user.py
+ create mode 100644 src/App.jsx
+ create mode 100644 src/api/client.js
+ create mode 100644 src/components/Layout.jsx
+ create mode 100644 src/components/MarketCard.jsx
+ create mode 100644 src/components/ProtectedRoute.jsx
+ create mode 100644 src/components/Sidebar.jsx
+ create mode 100644 src/components/Toast.jsx
+ create mode 100644 src/components/TradeModal.jsx
+ create mode 100644 src/context/AuthContext.jsx
+ create mode 100644 src/main.jsx
+ create mode 100644 src/pages/Activity.jsx
+ create mode 100644 src/pages/ActivityPage.jsx
+ create mode 100644 src/pages/Admin.jsx
+ create mode 100644 src/pages/AdminPage.jsx
+ create mode 100644 src/pages/Leaderboard.jsx
+ create mode 100644 src/pages/LeaderboardPage.jsx
+ create mode 100644 src/pages/Login.jsx
+ create mode 100644 src/pages/LoginPage.jsx
+ create mode 100644 src/pages/Markets.jsx
+ create mode 100644 src/pages/MarketsPage.jsx
+ create mode 100644 src/pages/Portfolio.jsx
+ create mode 100644 src/pages/PortfolioPage.jsx
+ create mode 100644 src/pages/Register.jsx
+ create mode 100644 src/pages/RegisterPage.jsx
+ create mode 100644 src/styles/index.css
+ create mode 100644 test_app.py
+ create mode 100644 utils/auth_helper.py
+ create mode 100644 utils/pricing.py
+ create mode 100644 utils/settlement.py
+ create mode 100644 utils/trade_engine.py
+ create mode 100644 vite.config.js
+

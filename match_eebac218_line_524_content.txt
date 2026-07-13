@@ -1,0 +1,1 @@
+I will check the `Leaderboard.jsx` file to see how user rankings are retrieved and displayed.

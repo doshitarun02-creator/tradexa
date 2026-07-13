@@ -132,15 +132,14 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-slate-900 flex items-center justify-center text-lg">
+                <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-lg">
                   {market.icon || "📊"}
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/80 border border-slate-700 text-[10px] text-slate-300 mb-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    <span>{market.category}</span>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e53935] text-[10px] text-white font-bold uppercase select-none mb-1">
+                    <span>LIVE</span>
                   </div>
-                  <div className="text-sm font-medium text-slate-50 line-clamp-2">
+                  <div className="text-sm font-bold text-slate-800 line-clamp-2">
                     {market.question}
                   </div>
                 </div>
@@ -148,28 +147,28 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded-full hover:bg-slate-800"
+                className="p-1 rounded-full hover:bg-slate-100"
               >
-                <X className="h-4 w-4 text-slate-400" />
+                <X className="h-4 w-4 text-slate-500" />
               </button>
             </div>
 
             {livePrice && (
-              <div className="rounded-xl border border-gold/40 bg-gold/5 px-3 py-2.5">
-                <div className="text-[11px] text-slate-400 mb-0.5">Live reference</div>
+              <div className="rounded-xl border border-amber-250 bg-amber-50 px-3 py-2.5">
+                <div className="text-[11px] text-slate-500 mb-0.5 font-semibold">Live reference</div>
                 {livePrice.type === "crypto" && (
-                  <div className="text-xs text-slate-50 font-mono">
+                  <div className="text-xs text-slate-800 font-mono font-medium">
                     {market.price_symbol} is currently{" "}
-                    <span className="text-gold">
+                    <span className="text-amber-700 font-bold">
                       {livePrice.inr ? `₹${livePrice.inr.toLocaleString("en-IN")}` : "—"}
                     </span>{" "}
                     <span
                       className={
                         livePrice.change24h > 0
-                          ? "text-emerald-400"
+                          ? "text-green-600 font-bold"
                           : livePrice.change24h < 0
-                          ? "text-red-400"
-                          : "text-slate-300"
+                          ? "text-red-500 font-bold"
+                          : "text-slate-500"
                       }
                     >
                       ({formatChange(livePrice.change24h)} today)
@@ -177,9 +176,9 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                   </div>
                 )}
                 {livePrice.type === "forex" && (
-                  <div className="text-xs text-slate-50 font-mono">
+                  <div className="text-xs text-slate-800 font-mono font-medium">
                     {market.price_symbol} is currently{" "}
-                    <span className="text-gold">
+                    <span className="text-amber-700 font-bold">
                       {livePrice.value ? livePrice.value.toFixed(4) : "—"}
                     </span>
                   </div>
@@ -187,35 +186,35 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
               </div>
             )}
 
-            <div className="flex items-center rounded-lg bg-slate-950/70 border border-border text-[11px] p-1.5">
+            <div className="flex items-center rounded-lg bg-slate-100 border border-slate-200 text-[11px] p-1.5">
               <button
                 type="button"
                 onClick={() => setSide("yes")}
-                className={`flex-1 py-1.5 rounded-md font-semibold ${
+                className={`flex-1 py-1.5 rounded-md font-bold transition-all ${
                   side === "yes"
-                    ? "bg-yes text-slate-950"
-                    : "text-slate-300 hover:bg-slate-800/80"
+                    ? "bg-yes text-slate-800 border border-primary/10 shadow-sm"
+                    : "text-slate-500 hover:bg-slate-200/80"
                 }`}
               >
-                YES ₹{(market.yes_price ?? 5).toFixed(2)}
+                YES ₹{(market.yes_price ?? 5).toFixed(1)}
               </button>
               <button
                 type="button"
                 onClick={() => setSide("no")}
-                className={`flex-1 py-1.5 rounded-md font-semibold ${
+                className={`flex-1 py-1.5 rounded-md font-bold transition-all ${
                   side === "no"
-                    ? "bg-no text-slate-50"
-                    : "text-slate-300 hover:bg-slate-800/80"
+                    ? "bg-no text-slate-800 border border-primary/10 shadow-sm"
+                    : "text-slate-500 hover:bg-slate-200/80"
                 }`}
               >
-                NO ₹{(market.no_price ?? 5).toFixed(2)}
+                NO ₹{(market.no_price ?? 5).toFixed(1)}
               </button>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300">
+              <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
                 <label>Quantity</label>
-                <span className="text-[11px] text-slate-500">Number of shares</span>
+                <span className="text-[11px] text-slate-400 font-normal">Number of shares</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -223,7 +222,7 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                   min={1}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
-                  className="flex-1 rounded-lg bg-slate-950/70 border border-border px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary/60"
+                  className="flex-1 rounded-lg bg-white border border-slate-350 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm"
                 />
                 <div className="flex gap-1 flex-wrap justify-end">
                   {quickChips.map((q) => (
@@ -231,7 +230,7 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                       key={q}
                       type="button"
                       onClick={() => setQuantity(q)}
-                      className="px-2 py-1 rounded-lg border border-slate-700 text-[11px] text-slate-300 hover:border-primary/60 hover:text-primary"
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px] text-slate-650 font-bold hover:border-primary hover:text-primary transition-colors shadow-sm"
                     >
                       {q}
                     </button>
@@ -240,32 +239,32 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-slate-950/80 px-3 py-3 text-[12px] font-mono text-slate-100 space-y-1.5">
+            <div className="rounded-xl border border-slate-250 bg-slate-50 px-3 py-3 text-[12px] font-mono text-slate-800 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-400">Price per share</span>
-                <span>{formatINR(pricePerShare)}</span>
+                <span className="text-slate-500">Price per share</span>
+                <span className="font-semibold">{formatINR(pricePerShare)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Quantity</span>
-                <span>{Number(quantity || 0)} shares</span>
+                <span className="text-slate-500">Quantity</span>
+                <span className="font-semibold">{Number(quantity || 0)} shares</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Total cost</span>
-                <span>{formatINR(totalCost)}</span>
+                <span className="text-slate-500">Total cost</span>
+                <span className="font-bold text-primary">{formatINR(totalCost)}</span>
               </div>
-              <div className="border-t border-slate-800 my-1.5" />
-              <div className="flex justify-between text-emerald-400">
+              <div className="border-t border-slate-200 my-1.5" />
+              <div className="flex justify-between text-green-600 font-bold">
                 <span>If YES wins</span>
                 <span>+{formatINR(profitIfWin)}</span>
               </div>
-              <div className="flex justify-between text-red-400">
+              <div className="flex justify-between text-red-500 font-bold">
                 <span>If NO wins</span>
                 <span>-{formatINR(lossIfLose)}</span>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 text-[11px] text-slate-400">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 mt-0.5" />
+            <div className="flex items-start gap-2 text-[11px] text-slate-500">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5" />
               <p>Opinion trading involves financial risk. Trade responsibly.</p>
             </div>
 
@@ -274,12 +273,12 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                 type="button"
                 disabled={loading}
                 onClick={handleConfirm}
-                className="w-full inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-primary to-teal-300 text-slate-950 text-sm font-semibold py-2.5 shadow-lg hover:shadow-primary/40 transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center rounded-lg bg-primary hover:bg-[#095780] text-white text-sm font-bold py-3 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "Placing trade…" : `Confirm ${side.toUpperCase()} trade`}
               </button>
               {error && (
-                <div className="text-[11px] text-red-400 mt-0.5">
+                <div className="text-[11px] text-red-500 mt-0.5 font-semibold">
                   {error}
                 </div>
               )}

@@ -6,10 +6,12 @@ import { formatINR, formatTimeLeft, formatTimeAgo } from "../utils/formatters";
 import SkeletonCard from "../components/SkeletonCard";
 import TradeModal from "../components/TradeModal";
 import usePrices from "../hooks/usePrices";
+import useAuth from "../hooks/useAuth";
 
 const MarketDetail = () => {
   const { id } = useParams();
   const { getPriceForSymbol } = usePrices();
+  const { user } = useAuth();
   const [market, setMarket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trades, setTrades] = useState([]);
@@ -98,161 +100,98 @@ const MarketDetail = () => {
     );
   }
 
+  const walletBalance = user?.wallet ? Number(user.wallet).toLocaleString("en-IN") : "0";
+
   return (
-    <div className="space-y-4">
-      <button
-        type="button"
-        onClick={() => window.history.back()}
-        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back to markets
-      </button>
+    <div>
+      <header className="ot-header">
+        <b>Market Detail</b>
+        <span>Balance ₹{walletBalance}</span>
+      </header>
 
-      <div className="rounded-xl border border-border bg-surface/80 p-4 space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-full bg-slate-900 flex items-center justify-center text-2xl">
-            {market.icon || "📊"}
-          </div>
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-900/80 border border-slate-700 text-[10px] text-slate-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span>{market.category}</span>
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Ends in {formatTimeLeft(market.end_time)}
-              </span>
+      <div className="ot-wrap" style={{ paddingBottom: "80px" }}>
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#0b6fa4",
+            fontWeight: "bold",
+            cursor: "pointer",
+            marginBottom: "12px",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: 0
+          }}
+        >
+          ← Back to markets
+        </button>
+
+        <div className="ot-card" style={{ margin: 0, marginBottom: "15px" }}>
+          <div style={{ display: "flex", alignItems: "start", gap: "12px" }}>
+            <div style={{ fontSize: "28px" }}>
+              {market.icon || "📊"}
             </div>
-            <h1 className="text-base sm:text-lg font-semibold text-slate-50 mb-1">
-              {market.question}
-            </h1>
-            {livePrice && (
-              <div className="inline-flex items-center gap-2 rounded-full bg-gold/10 border border-gold/50 px-3 py-1 text-[11px] font-mono text-gold mt-1">
-                <span>{market.price_symbol}</span>
-                {livePrice.type === "crypto" && (
-                  <>
-                    <span className="text-slate-100">
-                      {livePrice.inr
-                        ? `₹${livePrice.inr.toLocaleString("en-IN")}`
-                        : "—"}
-                    </span>
-                  </>
-                )}
-                {livePrice.type === "forex" && (
-                  <span className="text-slate-100">
-                    {livePrice.value ? livePrice.value.toFixed(4) : "—"}
-                  </span>
-                )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span className="ot-badge">LIVE</span>
+                <span style={{ fontSize: "12px", color: "#666" }}>
+                  Ends in {formatTimeLeft(market.end_time)}
+                </span>
               </div>
-            )}
+              <h3 style={{ margin: "4px 0", fontSize: "18px", fontWeight: "bold", color: "#222" }}>
+                {market.question}
+              </h3>
+              <p style={{ margin: "4px 0", color: "#666", fontSize: "13px" }}>
+                Category: {market.category} • Volume: {formatINR(market.volume || 0)}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#666", marginBottom: "4px", fontWeight: "bold" }}>
+              <span>YES {yesProb}%</span>
+              <span>NO {noProb}%</span>
+            </div>
+            <div style={{ height: "8px", borderRadius: "10px", background: "#eee", overflow: "hidden", display: "flex" }}>
+              <div className="ot-yes-btn" style={{ width: `${yesProb}%`, height: "100%" }} />
+              <div className="ot-no-btn" style={{ width: `${noProb}%`, height: "100%" }} />
+            </div>
+          </div>
+
+          <div className="ot-odds" style={{ marginTop: "15px" }}>
+            <div className="ot-btn ot-blue" onClick={() => openTrade("yes")}>YES</div>
+            <div className="ot-btn ot-pink" onClick={() => openTrade("no")}>NO</div>
+            <div className="ot-btn ot-blue" onClick={() => openTrade("yes")}>{yesProb}%</div>
+            <div className="ot-btn ot-pink" onClick={() => openTrade("no")}>{noProb}%</div>
+            <div className="ot-btn ot-blue" onClick={() => openTrade("yes")}>BUY</div>
+            <div className="ot-btn ot-pink" onClick={() => openTrade("no")}>SELL</div>
           </div>
         </div>
 
-        <div className="space-y-2 mt-3">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-            <span>YES {yesProb}%</span>
-            <span>NO {noProb}%</span>
-          </div>
-          <div className="h-3.5 rounded-full bg-slate-900 overflow-hidden flex">
-            <div
-              className="h-full bg-yes/90"
-              style={{ width: `${yesProb}%` }}
-            />
-            <div
-              className="h-full bg-no/90"
-              style={{ width: `${noProb}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-[11px]">
-          <div className="rounded-lg bg-slate-950/70 border border-border px-3 py-2">
-            <div className="flex items-center gap-1 text-slate-400 mb-1">
-              <BarChart2 className="h-3 w-3" />
-              <span>Volume</span>
-            </div>
-            <div className="text-slate-100 font-mono text-xs">
-              {formatINR(market.volume || 0)}
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-950/70 border border-border px-3 py-2">
-            <div className="flex items-center gap-1 text-slate-400 mb-1">
-              <Users className="h-3 w-3" />
-              <span>Traders</span>
-            </div>
-            <div className="text-slate-100 font-mono text-xs">
-              {market.traders || 0}
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-950/70 border border-border px-3 py-2">
-            <div className="flex items-center gap-1 text-slate-400 mb-1">
-              <CalendarClock className="h-3 w-3" />
-              <span>End time</span>
-            </div>
-            <div className="text-slate-100 font-mono text-[11px]">
-              {new Date(market.end_time).toLocaleString()}
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-950/70 border border-border px-3 py-2">
-            <div className="flex items-center gap-1 text-slate-400 mb-1">
-              <span>Status</span>
-            </div>
-            <div className="text-slate-100 font-mono text-xs capitalize">
-              {market.status}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col sm:flex-row gap-2">
-          <button
-            type="button"
-            onClick={() => openTrade("yes")}
-            className="flex-1 inline-flex items-center justify-center rounded-lg bg-yes/90 hover:bg-yes text-slate-950 text-sm font-semibold py-2.5 transition-colors"
-          >
-            Buy YES ₹{yesPrice.toFixed(2)}
-          </button>
-          <button
-            type="button"
-            onClick={() => openTrade("no")}
-            className="flex-1 inline-flex items-center justify-center rounded-lg bg-no/90 hover:bg-no text-slate-50 text-sm font-semibold py-2.5 transition-colors"
-          >
-            Buy NO ₹{noPrice.toFixed(2)}
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-surface/80 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-100">Recent trades</h2>
-          <span className="text-[11px] text-slate-500">
-            Last {trades.length} fills on this market
-          </span>
-        </div>
-        {trades.length === 0 ? (
-          <div className="text-xs text-slate-500">
-            No recent trades yet. Be the first to take a view.
-          </div>
-        ) : (
-          <ul className="space-y-1.5 text-[11px] text-slate-300">
-            {trades.map((t) => (
-              <li key={t.id} className="flex items-center justify-between">
-                <span>
-                  Trader bought{" "}
-                  <span className="font-mono text-slate-100">{t.quantity}</span>{" "}
-                  {t.side.toUpperCase()} shares at{" "}
-                  <span className="font-mono text-slate-100">
-                    {formatINR(t.price_per_share)}
+        <div className="ot-card" style={{ margin: 0 }}>
+          <h3 style={{ margin: "0 0 10px", borderBottom: "1px solid #eee", paddingBottom: "6px", fontSize: "16px" }}>Recent Trades</h3>
+          {trades.length === 0 ? (
+            <div style={{ fontSize: "13px", color: "#666", padding: "10px 0" }}>No recent trades yet.</div>
+          ) : (
+            <div>
+              {trades.map((t) => (
+                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontSize: "13px", borderBottom: "1px solid #eee" }}>
+                  <span>
+                    Bought <b>{t.quantity}</b> {t.side.toUpperCase()} at <b>₹{t.price_per_share}</b>
                   </span>
-                </span>
-                <span className="text-slate-500">
-                  {formatTimeAgo(t.created_at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <span style={{ color: "#888" }}>{formatTimeAgo(t.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+
 
       <TradeModal
         open={modalOpen}
