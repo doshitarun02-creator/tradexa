@@ -2,13 +2,26 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const BottomNav = ({ active }) => {
+  const items = [
+    { key: "home", label: "Home", icon: "🏠", path: "/portfolio" },
+    { key: "markets", label: "Markets", icon: "📈", path: "/markets" },
+    { key: "points", label: "Points", icon: "💎", path: "/wallet" },
+    { key: "history", label: "History", icon: "📜", path: "/my-trades" },
+    { key: "profile", label: "Profile", icon: "👤", path: "/profile" },
+  ];
+
   return (
     <nav className="ot-bottom-nav">
-      <Link to="/markets" className={active === "home" ? "active" : ""}>🏠<br/>Home</Link>
-      <Link to="/markets?view=list" className={active === "markets" ? "active" : ""}>📈<br/>Markets</Link>
-      <Link to="/wallet" className={active === "wallet" ? "active" : ""}>💼<br/>Wallet</Link>
-      <Link to="/activity" className={active === "history" ? "active" : ""}>📜<br/>History</Link>
-      <Link to="/profile" className={active === "profile" ? "active" : ""}>👤<br/>Profile</Link>
+      {items.map((item) => (
+        <Link
+          key={item.key}
+          to={item.path}
+          className={`ot-bottom-nav-item ${active === item.key ? "ot-bottom-nav-active" : ""}`}
+        >
+          <span className="ot-bottom-nav-icon">{item.icon}</span>
+          <span className="ot-bottom-nav-label">{item.label}</span>
+        </Link>
+      ))}
     </nav>
   );
 };

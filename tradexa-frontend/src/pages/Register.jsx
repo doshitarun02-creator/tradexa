@@ -6,13 +6,10 @@ import Toast from "../components/Toast";
 const Register = () => {
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [referral, setReferral] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -23,10 +20,14 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setToast({
+        id: Date.now(),
+        type: "error",
+        title: "Password mismatch",
+        message: "Passwords do not match!",
+      });
       return;
     }
-
     setSubmitting(true);
     const res = await register(name, email, password);
     setSubmitting(false);
@@ -43,12 +44,11 @@ const Register = () => {
   };
 
   return (
-    <div className="ot-auth-body">
-      <div className="ot-auth-card" style={{ marginTop: "20px", marginBottom: "20px" }}>
-        <div className="ot-auth-logo" style={{ marginBottom: "8px" }}>Tradexa</div>
-        <div className="ot-auth-sub">Create your account</div>
-
-        <form onSubmit={handleSubmit}>
+    <div className="ot-auth-page">
+      <div className="ot-auth-card">
+        <h1 className="ot-auth-brand">Tradexa</h1>
+        <p className="ot-auth-subtitle">Create your account to start trading with points.</p>
+        <form onSubmit={handleSubmit} className="ot-auth-form">
           <label className="ot-auth-label">Full Name</label>
           <input
             type="text"
@@ -58,26 +58,15 @@ const Register = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-
-          <label className="ot-auth-label">Mobile Number</label>
-          <input
-            type="tel"
-            className="ot-auth-input"
-            placeholder="Enter mobile number"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-
           <label className="ot-auth-label">Email Address</label>
           <input
             type="email"
             className="ot-auth-input"
             placeholder="Enter email"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-
           <label className="ot-auth-label">Password</label>
           <input
             type="password"
@@ -87,7 +76,6 @@ const Register = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
           <label className="ot-auth-label">Confirm Password</label>
           <input
             type="password"
@@ -97,38 +85,24 @@ const Register = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-
-          <label className="ot-auth-label">Referral Code (Optional)</label>
-          <input
-            type="text"
-            className="ot-auth-input"
-            placeholder="Referral code"
-            value={referral}
-            onChange={(e) => setReferral(e.target.value)}
-          />
-
-          <label className="ot-auth-label" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "normal" }}>
-            <input type="checkbox" style={{ width: "auto" }} required />
+          <label className="ot-auth-checkbox-row">
+            <input type="checkbox" required />
             I agree to the Terms & Conditions
           </label>
-
-          <button type="submit" className="ot-auth-button" disabled={submitting}>
+          <button type="submit" className="ot-auth-submit" disabled={submitting}>
             {submitting ? "Creating Account..." : "Create Account"}
           </button>
         </form>
-
-        <small style={{ display: "block", marginTop: "12px", color: "#666", textAlign: "center" }}>
-          By signing up, you agree to our Terms of Service and Privacy Policy.
-        </small>
-
-        <div className="ot-auth-links">
+        <p className="ot-auth-fine-print">
+          New accounts start with a starter points balance. Additional points are credited
+          by an administrator after cash is received offline — there is no online payment
+          on this platform.
+        </p>
+        <p className="ot-auth-footer">
           Already have an account? <Link to="/login">Login</Link>
-        </div>
+        </p>
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </div>
-
-      {toast && (
-        <Toast toast={toast} onClose={() => setToast(null)} />
-      )}
     </div>
   );
 };

@@ -34,7 +34,7 @@ function Leaderboard() {
           id: item.id || item.email || `leader-${index + 1}`,
           rank: Number(item.rank || index + 1),
           name: item.name || `Trader ${index + 1}`,
-          metric: Number(item.wallet || 0),
+          metric: Number(item.points_balance || 0),
           winRate: item.win_rate || 0,
           wins: item.wins || 0,
           losses: item.losses || 0,
@@ -138,7 +138,7 @@ function Leaderboard() {
           <div className="mb-5">
             <h2 className="text-lg font-semibold text-slate-100">Full Ranking</h2>
             <p className="mt-1 text-xs text-slate-400">
-              Ordered by current wallet balance.
+              Ordered by current points balance.
             </p>
           </div>
 

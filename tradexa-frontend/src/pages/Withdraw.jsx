@@ -1,123 +1,188 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import useAuth from "../hooks/useAuth";
+import client from "../api/client";
+import Layout from "../components/Layout";
+import Toast from "../components/Toast";
+
+const STATUS_LABELS = {
+  pending: "Pending Review",
+  approved: "Approved — Payout in Progress",
+  rejected: "Rejected",
+  completed: "Completed",
+  failed: "Failed (Refunded)",
+};
 
 const Withdraw = () => {
-  const { user, updateWallet } = useAuth();
-  const [amount, setAmount] = useState("");
-  const [bank, setBank] = useState("HDFC Bank • XXXX4321");
-  const [upi, setUpi] = useState("");
-  const [withdrawals, setWithdrawals] = useState([
-    { id: 1, amount: 2000, status: "Completed", date: "Yesterday" },
-    { id: 2, amount: 5000, status: "Completed", date: "05 Jul" },
-    { id: 3, amount: 1200, status: "Pending", date: "Today" },
-  ]);
+  const { user, refreshMe } = useAuth();
+  const [pointsRequested, setPointsRequested] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState("bank_transfer");
+  const [payoutDetails, setPayoutDetails] = useState("");
+  const [noteByUser, setNoteByUser] = useState("");
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const handleRequest = (e) => {
-    e.preventDefault();
-    const withdrawVal = parseFloat(amount);
-
-    if (Number.isNaN(withdrawVal) || withdrawVal < 100) {
-      alert("Minimum withdrawal amount is ₹100.");
-      return;
+  const loadRequests = async () => {
+    try {
+      const res = await client.get("/redemptions/my-requests", { params: { limit: 10 } });
+      const root = res?.data?.data ?? {};
+      setRequests(root.redemptions || []);
+    } catch {
+      setRequests([]);
+    } finally {
+      setLoading(false);
     }
-
-    if (withdrawVal > (user?.wallet || 0)) {
-      alert("Insufficient wallet balance.");
-      return;
-    }
-
-    // Deduct and add to list
-    const newBal = (user?.wallet || 0) - withdrawVal;
-    updateWallet(newBal);
-
-    setWithdrawals((prev) => [
-      {
-        id: Date.now(),
-        amount: withdrawVal,
-        status: "Pending",
-        date: "Today",
-      },
-      ...prev,
-    ]);
-
-    setAmount("");
-    setUpi("");
-    alert(`Withdrawal request for ₹${withdrawVal} has been submitted!`);
   };
 
-  const walletBalance = user?.wallet ? Number(user.wallet).toLocaleString("en-IN") : "0";
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  const hasPendingRequest = requests.some((r) => r.status === "pending");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const requestedVal = parseFloat(pointsRequested);
+
+    if (Number.isNaN(requestedVal) || requestedVal <= 0) {
+      setToast({ type: "error", message: "Enter a valid points amount." });
+      return;
+    }
+    if (requestedVal > (user?.points_balance || 0)) {
+      setToast({ type: "error", message: "Insufficient points balance." });
+      return;
+    }
+    if (!payoutDetails.trim()) {
+      setToast({ type: "error", message: "Enter your bank account or UPI details." });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await client.post("/redemptions", {
+        points_requested: requestedVal,
+        payout_method: payoutMethod,
+        payout_details: payoutDetails,
+        note_by_user: noteByUser || null,
+      });
+      if (res.data?.success) {
+        setPointsRequested("");
+        setPayoutDetails("");
+        setNoteByUser("");
+        setToast({ type: "success", message: "Redeem request submitted for admin review." });
+        await Promise.all([loadRequests(), refreshMe()]);
+      } else {
+        setToast({ type: "error", message: res.data?.message || "Failed to submit redeem request." });
+      }
+    } catch (err) {
+      setToast({ type: "error", message: err?.response?.data?.message || "Failed to submit redeem request." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const pointsBalance = user?.points_balance
+    ? Number(user.points_balance).toLocaleString("en-IN")
+    : "0";
 
   return (
-    <div>
-      <header className="ot-header">
-        <b>Withdraw Funds</b>
-      </header>
+    <Layout>
+      <div className="ot-page">
+        <h1 className="ot-page-title">Redeem Request</h1>
 
-      <div className="ot-container">
-        {/* Balance Card */}
-        <div className="ot-card">
-          <div className="ot-sub">Available Balance</div>
-          <div className="ot-balance">₹{walletBalance}.00</div>
+        <div className="ot-balance-card">
+          <p className="ot-balance-label">Available Points</p>
+          <p className="ot-balance-value">{pointsBalance} pts</p>
         </div>
 
-        {/* Input Card Form */}
-        <div className="ot-card">
-          <form onSubmit={handleRequest}>
-            <label className="ot-withdraw-label">Withdraw Amount</label>
+        {hasPendingRequest ? (
+          <div className="ot-fine-print" style={{ marginTop: "16px" }}>
+            You already have a pending redeem request. It must be reviewed by an
+            administrator before you can submit a new one.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="ot-withdraw-form">
+            <label className="ot-auth-label">Points to Redeem</label>
             <input
               type="number"
               required
-              min={100}
+              min="1"
               className="ot-withdraw-input"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter points amount"
+              value={pointsRequested}
+              onChange={(e) => setPointsRequested(e.target.value)}
             />
 
-            <label className="ot-withdraw-label">Select Bank Account</label>
+            <label className="ot-auth-label">Payout Method</label>
             <select
               className="ot-withdraw-select"
-              value={bank}
-              onChange={(e) => setBank(e.target.value)}
+              value={payoutMethod}
+              onChange={(e) => setPayoutMethod(e.target.value)}
             >
-              <option value="HDFC Bank • XXXX4321">HDFC Bank • XXXX4321</option>
-              <option value="ICICI Bank • XXXX9832">ICICI Bank • XXXX9832</option>
-              <option value="SBI • XXXX7715">SBI • XXXX7715</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="upi">UPI</option>
             </select>
 
-            <label className="ot-withdraw-label">UPI ID (Optional)</label>
+            <label className="ot-auth-label">
+              {payoutMethod === "upi" ? "UPI ID" : "Bank Account Details"}
+            </label>
+            <input
+              type="text"
+              required
+              className="ot-withdraw-input"
+              placeholder={payoutMethod === "upi" ? "example@upi" : "Account number, IFSC, name"}
+              value={payoutDetails}
+              onChange={(e) => setPayoutDetails(e.target.value)}
+            />
+
+            <label className="ot-auth-label">Note (optional)</label>
             <input
               type="text"
               className="ot-withdraw-input"
-              placeholder="example@upi"
-              value={upi}
-              onChange={(e) => setUpi(e.target.value)}
+              placeholder="Anything the admin should know"
+              value={noteByUser}
+              onChange={(e) => setNoteByUser(e.target.value)}
             />
 
-            <button type="submit" className="ot-withdraw-button">
-              Request Withdrawal
+            <button type="submit" className="ot-auth-submit" disabled={submitting}>
+              {submitting ? "Submitting..." : "Submit Redeem Request"}
             </button>
           </form>
+        )}
 
-          <div className="ot-note">
-            Processing time: 1–24 hours.
-            <br />
-            Minimum withdrawal: ₹100.
-          </div>
-        </div>
+        <p className="ot-fine-print">
+          Redeem requests are reviewed manually by an administrator. Once approved,
+          your points are deducted and the equivalent cash payout is sent to you
+          offline. Processing time: 1–24 hours.
+        </p>
 
-        {/* History card */}
-        <div className="ot-card">
-          <h3 style={{ margin: "0 0 10px", fontSize: "16px" }}>Recent Withdrawals</h3>
-          {withdrawals.map((w) => (
-            <p key={w.id} style={{ margin: "8px 0", fontSize: "14px" }}>
-              ₹{w.amount.toLocaleString("en-IN")} • {w.status} • {w.date}
-            </p>
-          ))}
+        <div className="ot-transactions-card">
+          <h3 className="ot-summary-title">Your Redeem Requests</h3>
+          {loading ? (
+            <p className="ot-empty-state">Loading requests...</p>
+          ) : requests.length === 0 ? (
+            <p className="ot-empty-state">No redeem requests yet.</p>
+          ) : (
+            requests.map((r) => (
+              <div className="ot-transaction-row" key={r.id}>
+                <div>
+                  <p className="ot-transaction-title">{r.points_requested} pts</p>
+                  <p className="ot-transaction-sub">
+                    {r.payout_method === "upi" ? "UPI" : "Bank Transfer"} • {new Date(r.created_at).toLocaleDateString()}
+                  </p>
+                  {r.note_by_admin && (
+                    <p className="ot-transaction-sub">Admin note: {r.note_by_admin}</p>
+                  )}
+                </div>
+                <span className={`ot-status-${r.status}`}>{STATUS_LABELS[r.status] || r.status}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
-
-    </div>
+      {toast && <Toast open={Boolean(toast)} type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+    </Layout>
   );
 };
 

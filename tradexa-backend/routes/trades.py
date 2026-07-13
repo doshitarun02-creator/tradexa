@@ -6,12 +6,12 @@ from pydantic import ValidationError
 
 from models.trade import create_trade, serialize_trade
 from models.market import serialize_market
-from models.user import serialize_user
 from utils.pricing import get_cost_of_trade, update_market_after_trade
 from utils.limiter import limiter
 from utils.response import api_response
 from utils.pagination import parse_pagination, PaginationError
 from schemas.trade import PlaceTradeSchema
+from services.points_service import debit_points, InsufficientPointsError, UserNotFoundError, DuplicateLedgerEntryError
 
 trades_bp = Blueprint("trades", __name__)
 
@@ -58,28 +58,42 @@ def place_trade():
     b = market.get("b", 100.0)
 
     cost = get_cost_of_trade(yes_shares, no_shares, b, side, quantity)
-    price_per_share = cost / quantity
 
-    if user.get("wallet", 0) < cost:
-        return api_response(False, {}, f"Insufficient wallet balance. Need ₹{cost:.2f}, have ₹{user['wallet']:.2f}", 400)
-
-    trade_doc = create_trade(user_id, market_id, side, quantity, price_per_share, cost)
+    trade_doc = create_trade(user_id, market_id, side, quantity, cost / quantity, cost)
     trade_result = db.trades.insert_one(trade_doc)
     trade_doc["_id"] = trade_result.inserted_id
+    trade_id = str(trade_result.inserted_id)
 
-    db.users.update_one(
-        {"_id": ObjectId(user_id)},
-        {"$inc": {"wallet": -cost, "total_trades": 1}}
-    )
+    try:
+        updated_user, _ledger_entry = debit_points(
+            db, user_id=user_id, amount=cost, actor_id=user_id,
+            reason=f"Bet placed on market {market_id} ({side}, qty {quantity})",
+            entry_type="trade_entry",
+            reference_type="trade", reference_id=trade_id,
+        )
+    except InsufficientPointsError:
+        db.trades.delete_one({"_id": trade_result.inserted_id})
+        return api_response(
+            False, {},
+            f"Insufficient points balance. Need {cost:.2f} pts, have {user.get('points_balance', 0):.2f} pts",
+            400,
+        )
+    except UserNotFoundError:
+        db.trades.delete_one({"_id": trade_result.inserted_id})
+        return api_response(False, {}, "User not found", 404)
+    except DuplicateLedgerEntryError:
+        db.trades.delete_one({"_id": trade_result.inserted_id})
+        return api_response(False, {}, "Duplicate trade detected, please retry", 409)
+
+    db.users.update_one({"_id": ObjectId(user_id)}, {"$inc": {"total_trades": 1}})
 
     updated_market = update_market_after_trade(db, market_oid, side, quantity, cost)
-    updated_user = db.users.find_one({"_id": ObjectId(user_id)})
 
     return api_response(True, {
         "trade": serialize_trade(trade_doc),
         "updated_market": serialize_market(updated_market),
-        "new_wallet_balance": round(updated_user.get("wallet", 0), 2),
-    }, "Trade placed successfully", 201)
+        "new_points_balance": round(updated_user.get("points_balance", 0), 2),
+    }, "Bet placed successfully", 201)
 
 
 @trades_bp.route("/my-trades", methods=["GET"])
@@ -112,12 +126,8 @@ def my_trades():
     pages = (total + limit - 1) // limit
 
     return api_response(True, {
-        "trades": enriched,
-        "total": total,
-        "page": page,
-        "limit": limit,
-        "pages": pages
-    }, "Trades fetched")
+        "trades": enriched, "total": total, "page": page, "limit": limit, "pages": pages
+    }, "History fetched")
 
 
 @trades_bp.route("/portfolio", methods=["GET"])
@@ -145,7 +155,6 @@ def portfolio():
     invested_result = list(db.trades.aggregate(invested_pipeline))
     total_invested = invested_result[0]["total"] if invested_result else 0.0
 
-    # Bounded fetch: open positions capped at 200 for stability
     open_trades = list(db.trades.find({"user_id": user_oid, "status": "open"}).limit(200))
     open_positions = []
     if open_trades:
@@ -162,12 +171,10 @@ def portfolio():
     win_rate = round((wins / total_settled * 100), 1) if total_settled > 0 else 0.0
 
     return api_response(True, {
-        "wallet": round(user.get("wallet", 0), 2),
-        "total_invested": round(total_invested, 2),
-        "total_pnl": round(total_pnl, 2),
-        "wins": wins,
-        "losses": losses,
-        "win_rate": win_rate,
+        "points_balance": round(user.get("points_balance", 0), 2),
+        "total_points_invested": round(total_invested, 2),
+        "total_points_pnl": round(total_pnl, 2),
+        "wins": wins, "losses": losses, "win_rate": win_rate,
         "total_trades": user.get("total_trades", 0),
         "open_positions": open_positions,
     }, "Portfolio fetched")
@@ -179,12 +186,8 @@ def leaderboard():
     limit = min(int(request.args.get("limit", 20)), 50)
 
     top_users = list(
-        db.users.find(
-            {"role": "user"},
-            {"name": 1, "wallet": 1, "wins": 1, "losses": 1, "total_trades": 1}
-        )
-        .sort("wallet", -1)
-        .limit(limit)
+        db.users.find({"role": "user"}, {"name": 1, "points_balance": 1, "wins": 1, "losses": 1, "total_trades": 1})
+        .sort("points_balance", -1).limit(limit)
     )
 
     board = []
@@ -192,14 +195,10 @@ def leaderboard():
         total = u.get("wins", 0) + u.get("losses", 0)
         win_rate = round(u["wins"] / total * 100, 1) if total > 0 else 0.0
         board.append({
-            "rank": rank,
-            "id": str(u["_id"]),
-            "name": u.get("name", ""),
-            "wallet": round(u.get("wallet", 0), 2),
-            "wins": u.get("wins", 0),
-            "losses": u.get("losses", 0),
-            "total_trades": u.get("total_trades", 0),
-            "win_rate": win_rate,
+            "rank": rank, "id": str(u["_id"]), "name": u.get("name", ""),
+            "points_balance": round(u.get("points_balance", 0), 2),
+            "wins": u.get("wins", 0), "losses": u.get("losses", 0),
+            "total_trades": u.get("total_trades", 0), "win_rate": win_rate,
         })
 
     return api_response(True, {"leaderboard": board}, "Leaderboard fetched")

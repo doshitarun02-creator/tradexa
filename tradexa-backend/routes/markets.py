@@ -17,8 +17,8 @@ markets_bp = Blueprint("markets", __name__)
 
 
 def _require_admin(claims):
-    if claims.get("role") not in ["super_admin", "ops_admin", "market_admin", "risk_admin"]:
-        return api_response(False, {}, "Admin access required", 403)
+    if claims.get("role") != "super_admin":
+        return api_response(False, {}, "Super admin access required", 403)
     return None
 
 

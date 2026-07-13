@@ -12,6 +12,8 @@ import {
   Users,
   X,
   Sparkles,
+  Wallet2,
+  Check,
 } from "lucide-react";
 import client from "../api/client";
 import Layout from "../components/Layout";
@@ -94,6 +96,7 @@ function SettlementConfirmModal({ market, outcome, open, loading, onClose, onCon
 const TABS = [
   { key: "markets", label: "Markets Manager", icon: Landmark, perm: null },
   { key: "users", label: "Users", icon: Users, perm: "users:view" },
+  { key: "redemptions", label: "Redeem Queue", icon: Wallet2, perm: "redemptions:view" },
   { key: "stats", label: "Platform Stats", icon: BarChart3, perm: "stats:view" },
 ];
 
@@ -148,6 +151,11 @@ export default function Admin() {
 
   const [walletAmountByUser, setWalletAmountByUser] = useState({});
   const [walletLoadingUserId, setWalletLoadingUserId] = useState("");
+  const [redemptions, setRedemptions] = useState([]);
+  const [redemptionsLoading, setRedemptionsLoading] = useState(false);
+  const [redemptionStatusFilter, setRedemptionStatusFilter] = useState("pending");
+  const [reviewNoteByRedemption, setReviewNoteByRedemption] = useState({});
+  const [redemptionActionLoadingId, setRedemptionActionLoadingId] = useState("");
 
   const [toast, setToast] = useState(null);
 
@@ -193,7 +201,7 @@ export default function Admin() {
       },
       {
         label: "Platform Balance",
-        value: formatCurrency(stats?.total_wallet_balance ?? 0),
+        value: formatCurrency(stats?.total_points_balance ?? 0),
         icon: CircleDollarSign,
         tone: "text-emerald-300 bg-emerald-500/10",
       },
@@ -258,11 +266,60 @@ export default function Admin() {
     }
   };
 
+  const loadRedemptions = async (status = redemptionStatusFilter) => {
+    setRedemptionsLoading(true);
+    try {
+      const response = await client.get("/admin/redemptions", { params: { status, limit: 50 } });
+      const data = response.data?.data || response.data || {};
+      setRedemptions(data.redemptions || []);
+    } catch (error) {
+      setToast({ type: "error", message: extractMessage(error, "Failed to load redeem requests.") });
+    } finally {
+      setRedemptionsLoading(false);
+    }
+  };
+
+  const handleRedemptionAction = async (redemptionId, action) => {
+    const note = reviewNoteByRedemption[redemptionId] || "";
+    setRedemptionActionLoadingId(redemptionId);
+    try {
+      await client.post(`/admin/redemptions/${redemptionId}/${action}`, {
+        note_by_admin: note || null,
+      });
+      setToast({ type: "success", message: `Redeem request ${action}ed.` });
+      setReviewNoteByRedemption((prev) => ({ ...prev, [redemptionId]: "" }));
+      await loadRedemptions();
+    } catch (error) {
+      setToast({ type: "error", message: extractMessage(error, `Failed to ${action} redeem request.`) });
+    } finally {
+      setRedemptionActionLoadingId("");
+    }
+  };
+
+  const handleRedemptionComplete = async (redemptionId, success) => {
+    const note = reviewNoteByRedemption[redemptionId] || "";
+    setRedemptionActionLoadingId(redemptionId);
+    try {
+      await client.post(`/admin/redemptions/${redemptionId}/complete`, {
+        note_by_admin: note || null,
+        success,
+      });
+      setToast({ type: "success", message: `Redeem request marked ${success ? "completed" : "failed"}.` });
+      setReviewNoteByRedemption((prev) => ({ ...prev, [redemptionId]: "" }));
+      await loadRedemptions();
+    } catch (error) {
+      setToast({ type: "error", message: extractMessage(error, "Failed to update redeem request.") });
+    } finally {
+      setRedemptionActionLoadingId("");
+    }
+  };
+
   useEffect(() => {
     loadMarkets();
     loadUsers();
     loadStats();
     loadTemplates();
+    loadRedemptions();
   }, []);
 
   const handleMarketInputChange = (event) => {
@@ -417,18 +474,18 @@ export default function Admin() {
     setWalletLoadingUserId(userId);
 
     try {
-      await client.patch(`/admin/users/${userId}/wallet`, {
+      await client.post(`/admin/users/${userId}/points`, {
         amount,
         operation, // add | subtract
         reason,
       });
       setWalletAmountByUser((prev) => ({ ...prev, [userId]: { amount: "", reason: "" } }));
-      setToast({ type: "success", message: `Wallet successfully modified.` });
+      setToast({ type: "success", message: `Points successfully modified.` });
       await Promise.all([loadUsers(), loadStats()]);
     } catch (error) {
       setToast({
         type: "error",
-        message: extractMessage(error, "Failed to adjust user wallet."),
+        message: extractMessage(error, "Failed to adjust user points."),
       });
     } finally {
       setWalletLoadingUserId("");
@@ -800,21 +857,21 @@ export default function Admin() {
                       <p className="text-sm font-semibold text-slate-200">{u.name || "Anonymous"}</p>
                       <p className="mt-0.5 truncate text-xs text-slate-400 font-mono">{u.email}</p>
                       <div className="mt-2.5 flex items-center gap-2 text-[9px] uppercase tracking-wider font-mono text-slate-500">
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${["super_admin", "ops_admin", "market_admin", "risk_admin"].includes(u.role) ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"}`}>{u.role}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${u.role === "super_admin" ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-400"}`}>{u.role}</span>
                         <span>•</span>
                         <span>Joined {formatDateTime(u.created_at)}</span>
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-[10px] uppercase font-mono tracking-wider text-slate-500">Wallet balance</p>
+                      <p className="text-[10px] uppercase font-mono tracking-wider text-slate-500">Points balance</p>
                       <p className="mt-1.5 text-base font-bold font-mono text-primary">
-                        {formatCurrency(u.wallet)}
+                        {formatCurrency(u.points_balance)}
                       </p>
                     </div>
 
                     <Can
-                      perm="wallet:adjust"
+                      perm="points:adjust"
                       fallback={
                         <div className="flex items-center justify-center text-[11px] text-slate-500 italic">
                           No wallet permission
@@ -867,6 +924,138 @@ export default function Admin() {
                         />
                       </div>
                     </Can>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {/* TAB: REDEMPTIONS */}
+        {activeTab === "redemptions" ? (
+          <section className="rounded-3xl border border-border bg-surface p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-100">Redeem / Payout Queue</h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  Review user-submitted redeem requests. Approving deducts points immediately;
+                  mark Completed only after the offline cash payout is actually sent.
+                </p>
+              </div>
+              <select
+                value={redemptionStatusFilter}
+                onChange={(e) => {
+                  setRedemptionStatusFilter(e.target.value);
+                  loadRedemptions(e.target.value);
+                }}
+                className="h-9 rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+
+            {redemptionsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-900/40" />
+                ))}
+              </div>
+            ) : redemptions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-slate-950/40 p-8 text-center text-xs text-slate-400">
+                No {redemptionStatusFilter} redeem requests.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
+                {redemptions.map((r) => (
+                  <div key={r.id} className="rounded-2xl border border-border bg-slate-950/30 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-200">
+                          {r.user_name || "Unknown user"} <span className="text-slate-500 font-mono text-xs">({r.user_email})</span>
+                        </p>
+                        <p className="mt-1 text-xs font-mono text-primary">{r.points_requested} pts</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {r.payout_method === "upi" ? "UPI" : "Bank Transfer"} — {r.payout_details}
+                        </p>
+                        {r.note_by_user && (
+                          <p className="mt-1 text-xs text-slate-500 italic">User note: {r.note_by_user}</p>
+                        )}
+                        {r.note_by_admin && (
+                          <p className="mt-1 text-xs text-slate-500 italic">Admin note: {r.note_by_admin}</p>
+                        )}
+                        <p className="mt-2 text-[10px] uppercase font-mono tracking-wider text-slate-500">
+                          Status: {r.status}
+                        </p>
+                      </div>
+
+                      {r.status === "pending" && (
+                        <div className="flex flex-col gap-2 min-w-[220px]">
+                          <input
+                            type="text"
+                            placeholder="Review note (optional)"
+                            value={reviewNoteByRedemption[r.id] || ""}
+                            onChange={(e) =>
+                              setReviewNoteByRedemption((prev) => ({ ...prev, [r.id]: e.target.value }))
+                            }
+                            className="h-9 rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRedemptionAction(r.id, "approve")}
+                              disabled={redemptionActionLoadingId === r.id}
+                              className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-xl bg-primary text-xs font-bold text-slate-950 hover:bg-primary-strong disabled:opacity-50"
+                            >
+                              <Check className="h-3.5 w-3.5" /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRedemptionAction(r.id, "reject")}
+                              disabled={redemptionActionLoadingId === r.id}
+                              className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-xl bg-slate-800 border border-border text-xs text-slate-200 hover:text-red-400 disabled:opacity-50"
+                            >
+                              <X className="h-3.5 w-3.5" /> Reject
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {r.status === "approved" && (
+                        <div className="flex flex-col gap-2 min-w-[220px]">
+                          <input
+                            type="text"
+                            placeholder="Completion note (optional)"
+                            value={reviewNoteByRedemption[r.id] || ""}
+                            onChange={(e) =>
+                              setReviewNoteByRedemption((prev) => ({ ...prev, [r.id]: e.target.value }))
+                            }
+                            className="h-9 rounded-xl border border-border bg-slate-900 px-3 text-xs text-slate-200 outline-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRedemptionComplete(r.id, true)}
+                              disabled={redemptionActionLoadingId === r.id}
+                              className="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
+                            >
+                              Mark Completed
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRedemptionComplete(r.id, false)}
+                              disabled={redemptionActionLoadingId === r.id}
+                              className="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-xs font-bold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                            >
+                              Mark Failed
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -928,7 +1117,7 @@ export default function Admin() {
                   <div className="rounded-2xl border border-border bg-slate-950/30 p-5">
                     <p className="text-xs text-slate-400">Escrow Balance</p>
                     <h3 className="mt-3 text-2xl font-bold font-mono text-slate-200">
-                      {formatCurrency(stats?.total_wallet_balance ?? 0)}
+                      {formatCurrency(stats?.total_points_balance ?? 0)}
                     </h3>
                   </div>
                 </div>

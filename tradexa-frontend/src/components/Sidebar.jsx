@@ -16,7 +16,7 @@ import { formatChange, formatINR } from "../utils/formatters";
 const navItems = [
   { to: "/markets", label: "Home", icon: Home, exact: true },
   { to: "/markets?view=list", label: "Markets", icon: BarChart2 },
-  { to: "/wallet", label: "Wallet", icon: Briefcase },
+  { to: "/wallet", label: "Points", icon: Briefcase },
   { to: "/activity", label: "History", icon: Activity },
   { to: "/profile", label: "Profile", icon: User },
 ];
@@ -62,10 +62,10 @@ const Sidebar = ({ isMobile = false }) => {
             </span>
           </div>
           <div className="text-lg font-semibold font-mono text-slate-800">
-            {formatINR(user?.wallet || 0)}
+            {formatINR(user?.points_balance || 0)}
           </div>
           <div className="text-[11px] text-slate-400">
-            Cash wallet · P&L from settled YES bets is already included.
+            Points balance · P&L from settled YES bets is already included.
           </div>
         </div>
       )}
@@ -81,7 +81,7 @@ const Sidebar = ({ isMobile = false }) => {
               ? location.pathname === "/markets" && !location.search
               : currentFull === item.to ||
                 (item.to === "/markets?view=list" && location.pathname.startsWith("/markets") && location.pathname !== "/markets") ||
-                (item.to === "/wallet" && location.pathname.startsWith("/withdraw"));
+                (item.to === "/wallet" && location.pathname.startsWith("/redeem"));
 
             return (
               <NavLink
@@ -120,7 +120,7 @@ const Sidebar = ({ isMobile = false }) => {
                 ? location.pathname === "/markets" && !location.search
                 : currentFull === item.to ||
                   (item.to === "/markets?view=list" && location.pathname.startsWith("/markets") && location.pathname !== "/markets") ||
-                  (item.to === "/wallet" && location.pathname.startsWith("/withdraw"));
+                  (item.to === "/wallet" && location.pathname.startsWith("/redeem"));
 
               return (
                 <NavLink

@@ -143,7 +143,7 @@ const Topbar = () => {
           <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2 py-1">
             <span className="text-[10px] text-white/80 hidden sm:inline">Balance</span>
             <span className="text-xs font-bold text-white font-mono">
-              {formatINR(user?.wallet || 0)}
+              {formatINR(user?.points_balance || 0)}
             </span>
           </div>
         </div>
@@ -165,7 +165,7 @@ const Topbar = () => {
               {user?.name || "Trader"}
             </span>
             <span className="text-[9px] text-white/70 leading-tight">
-              {["super_admin", "ops_admin", "market_admin", "risk_admin"].includes(user?.role) ? "Admin" : "Retail"}
+              {user?.role === "super_admin" ? "Admin" : "Retail"}
             </span>
           </div>
         </div>

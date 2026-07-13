@@ -147,14 +147,14 @@ const MarketCard = ({ market, onTrade }) => {
             onClick={onYes}
             className="flex-1 inline-flex items-center justify-center rounded-[8px] bg-yes hover:bg-yes/80 text-slate-800 text-xs font-bold py-2.5 transition-colors border border-primary/10"
           >
-            YES ₹{yesPrice.toFixed(1)}
+            YES {yesPrice.toFixed(1)} pts
           </button>
           <button
             type="button"
             onClick={onNo}
             className="flex-1 inline-flex items-center justify-center rounded-[8px] bg-no hover:bg-no/80 text-slate-800 text-xs font-bold py-2.5 transition-colors border border-primary/10"
           >
-            NO ₹{noPrice.toFixed(1)}
+            NO {noPrice.toFixed(1)} pts
           </button>
         </div>
       </div>

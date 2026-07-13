@@ -1,10 +1,7 @@
 export const formatINR = (value) => {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "₹0";
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(value);
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "0 pts";
+  const num = Number(value);
+  return `${num.toLocaleString("en-IN", { maximumFractionDigits: 2 })} pts`;
 };
 
 export const formatChange = (value) => {

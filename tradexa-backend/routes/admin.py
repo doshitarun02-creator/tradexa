@@ -7,7 +7,15 @@ from pydantic import ValidationError
 from models.user import serialize_user
 from models.market import serialize_market
 from models.audit import log_admin_action, serialize_audit_entry
-from models.wallet_ledger import create_ledger_entry, serialize_ledger_entry
+from models.points_ledger import create_points_ledger_entry, serialize_points_ledger_entry
+from services.points_service import (
+    credit_points,
+    debit_points,
+    reconcile_user_balance,
+    reconcile_all_users,
+    InsufficientPointsError,
+    UserNotFoundError,
+)
 from utils.settlement import settle_market
 from utils.permissions import (
     require_permission,
@@ -107,9 +115,9 @@ def stats():
     vol_result = list(db.trades.aggregate(volume_pipeline))
     total_volume = round(vol_result[0]["total"], 2) if vol_result else 0.0
 
-    wallet_pipeline = [{"$group": {"_id": None, "total": {"$sum": "$wallet"}}}]
-    wallet_result = list(db.users.aggregate(wallet_pipeline))
-    total_wallet = round(wallet_result[0]["total"], 2) if wallet_result else 0.0
+    points_pipeline = [{"$group": {"_id": None, "total": {"$sum": "$points_balance"}}}]
+    points_result = list(db.users.aggregate(points_pipeline))
+    total_points = round(points_result[0]["total"], 2) if points_result else 0.0
 
     return api_response(True, {
         "total_users": total_users,
@@ -119,7 +127,8 @@ def stats():
         "upcoming_markets": upcoming_markets,
         "total_trades": total_trades,
         "total_volume": total_volume,
-        "total_wallet_balance": total_wallet,
+        "total_wallet_balance": total_points,
+        "total_points_balance": total_points,
     }, "Stats fetched")
 
 
@@ -146,9 +155,9 @@ def list_users():
     }, "Users fetched")
 
 
-@admin_bp.route("/admin/users/<user_id>/wallet", methods=["PATCH"])
-@require_permission("wallet:adjust")
-def update_wallet(user_id):
+@admin_bp.route("/admin/users/<user_id>/points", methods=["POST"])
+@require_permission("points:adjust")
+def update_points(user_id):
     db = current_app.db
     claims = get_jwt()
     actor_id = get_jwt_identity()
@@ -157,10 +166,6 @@ def update_wallet(user_id):
         payload = WalletAdjustmentSchema(**(request.get_json() or {}))
     except ValidationError as e:
         return api_response(False, {}, e.errors()[0]["msg"], 400)
-
-    amount = payload.amount
-    operation = payload.operation
-    reason = payload.reason
 
     try:
         oid = ObjectId(user_id)
@@ -171,54 +176,58 @@ def update_wallet(user_id):
     if not user:
         return api_response(False, {}, "User not found", 404)
 
-    balance_before = float(user.get("wallet", 0.0))
+    balance_before = float(user.get("points_balance", 0.0))
 
     try:
-        if operation == "add":
-            db.users.update_one({"_id": oid}, {"$inc": {"wallet": amount}})
-            balance_after = balance_before + amount
-        else:
-            result = db.users.update_one(
-                {"_id": oid, "wallet": {"$gte": amount}},
-                {"$inc": {"wallet": -amount}},
+        if payload.operation == "add":
+            updated_user, entry = credit_points(
+                db, user_id=user_id, amount=payload.amount, actor_id=actor_id,
+                reason=payload.reason, entry_type="admin_credit",
             )
-            if result.matched_count == 0:
-                return api_response(False, {}, "Insufficient wallet balance", 400)
-            balance_after = balance_before - amount
+        else:
+            updated_user, entry = debit_points(
+                db, user_id=user_id, amount=payload.amount, actor_id=actor_id,
+                reason=payload.reason, entry_type="admin_debit",
+                allow_negative=True,
+            )
+    except InsufficientPointsError:
+        return api_response(False, {}, "Insufficient points balance", 400)
+    except UserNotFoundError:
+        return api_response(False, {}, "User not found", 404)
 
-        db.wallet_ledger.insert_one(create_ledger_entry(
-            user_id=user_id,
-            amount=amount if operation == "add" else -amount,
-            type="admin_adjustment",
-            actor_id=actor_id,
-            reason=reason,
-            balance_before=balance_before,
-            balance_after=balance_after,
-        ))
+    balance_after = updated_user["points_balance"]
 
-        log_admin_action(
-            db,
-            actor_id=actor_id,
-            actor_role=claims.get("role"),
-            action="wallet_adjust",
-            target_type="user",
-            target_id=user_id,
-            before={"wallet": balance_before},
-            after={"wallet": balance_after},
-            metadata={"operation": operation, "amount": amount, "reason": reason},
-            **_client_meta(),
-        )
+    log_admin_action(
+        db,
+        actor_id=actor_id,
+        actor_role=claims.get("role"),
+        action="points_adjust",
+        target_type="user",
+        target_id=user_id,
+        before={"points_balance": balance_before},
+        after={"points_balance": balance_after},
+        metadata={"operation": payload.operation, "amount": payload.amount, "reason": payload.reason},
+        **_client_meta(),
+    )
 
-        updated_user = db.users.find_one({"_id": oid})
-        return api_response(True, {"user": serialize_user(updated_user)}, "Wallet updated")
-    except Exception as e:
-        logger.exception("Wallet update failed")
-        return api_response(False, {}, "Failed to update wallet, please try again", 500)
+    return api_response(True, {
+        "points_balance": round(balance_after, 2),
+        "ledger_entry_id": str(entry.get("_id")) if entry.get("_id") else None,
+        "user": serialize_user(updated_user),
+    }, "Points updated", 200)
 
 
+@admin_bp.route("/admin/users/<user_id>/wallet", methods=["PATCH"])
+@require_permission("points:adjust")
+def update_wallet_legacy(user_id):
+    """Wrapper to support PATCH /admin/users/<user_id>/wallet legacy endpoint."""
+    return update_points(user_id)
+
+
+@admin_bp.route("/admin/users/<user_id>/points-history", methods=["GET"])
 @admin_bp.route("/admin/users/<user_id>/wallet-history", methods=["GET"])
-@require_permission("wallet:adjust")
-def wallet_history(user_id):
+@require_permission("points:adjust")
+def points_history(user_id):
     db = current_app.db
 
     try:
@@ -232,18 +241,44 @@ def wallet_history(user_id):
         return api_response(False, {}, str(e), 400)
 
     entries = list(
-        db.wallet_ledger.find({"user_id": oid}).sort("created_at", -1).skip(skip).limit(limit)
+        db.points_ledger.find({"user_id": oid}).sort("created_at", -1).skip(skip).limit(limit)
     )
-    total = db.wallet_ledger.count_documents({"user_id": oid})
+    total = db.points_ledger.count_documents({"user_id": oid})
     pages = (total + limit - 1) // limit
 
     return api_response(True, {
-        "entries": [serialize_ledger_entry(e) for e in entries],
+        "entries": [serialize_points_ledger_entry(e) for e in entries],
         "total": total,
         "page": page,
         "limit": limit,
         "pages": pages,
-    }, "Wallet history retrieved")
+    }, "Points history retrieved")
+
+
+@admin_bp.route("/admin/reconcile", methods=["GET"])
+@require_permission("stats:view")
+def reconcile_all():
+    db = current_app.db
+    try:
+        mismatches = reconcile_all_users(db)
+        return api_response(True, {"mismatches": mismatches}, "Reconciliation complete")
+    except Exception as e:
+        logger.exception("Reconciliation failed")
+        return api_response(False, {}, "Reconciliation failed", 500)
+
+
+@admin_bp.route("/admin/reconcile/users/<user_id>", methods=["GET"])
+@require_permission("points:adjust")
+def reconcile_user(user_id):
+    db = current_app.db
+    try:
+        result = reconcile_user_balance(db, user_id)
+        return api_response(True, {"reconciliation": result}, "Reconciliation complete")
+    except UserNotFoundError:
+        return api_response(False, {}, "User not found", 404)
+    except Exception as e:
+        logger.exception("Reconciliation failed")
+        return api_response(False, {}, "Reconciliation failed", 500)
 
 
 @admin_bp.route("/admin/users/<user_id>/status", methods=["PATCH"])

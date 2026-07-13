@@ -1,53 +1,49 @@
 """
-Role-based permission system for TradeXa.
+Role-based permission system for TradeXa — Points Model.
 
-Roles form a flat set (no inheritance) — each role is granted an explicit
-list of permission strings. This keeps authorization auditable: to know what
-a role can do, read ROLE_PERMISSIONS[role] directly, no hidden inheritance
-chains to trace.
+TradeXa now runs a two-role system:
+  - super_admin: full control over markets, points ledger, redemptions, users
+  - user: end-user, no admin powers of any kind
+
+Previous granular admin roles (ops_admin, market_admin, risk_admin) have been
+collapsed into super_admin per the points-based business model. Any user
+document with one of those legacy role strings must be migrated to
+"super_admin" manually before this change goes live in production.
 
 To add a new permission:
 1. Add the permission string to PERMISSIONS (documentation/registry).
-2. Grant it to the appropriate role(s) in ROLE_PERMISSIONS.
+2. Grant it to super_admin in ROLE_PERMISSIONS (user always gets none).
 3. Decorate the route with @require_permission("the:permission").
-
-See ROLE_PERMISSION_MATRIX.md at the repo root for the human-readable matrix.
 """
 from functools import wraps
-from flask import jsonify, request
+from flask import jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
 
 # ---------------------------------------------------------------------------
 # Roles
 # ---------------------------------------------------------------------------
 ROLE_SUPER_ADMIN = "super_admin"
-ROLE_OPS_ADMIN = "ops_admin"
-ROLE_MARKET_ADMIN = "market_admin"
-ROLE_RISK_ADMIN = "risk_admin"
 ROLE_USER = "user"
 
-ALL_ROLES = [
-    ROLE_SUPER_ADMIN,
-    ROLE_OPS_ADMIN,
-    ROLE_MARKET_ADMIN,
-    ROLE_RISK_ADMIN,
-    ROLE_USER,
-]
-
-ADMIN_ROLES = [ROLE_SUPER_ADMIN, ROLE_OPS_ADMIN, ROLE_MARKET_ADMIN, ROLE_RISK_ADMIN]
+ALL_ROLES = [ROLE_SUPER_ADMIN, ROLE_USER]
+ADMIN_ROLES = [ROLE_SUPER_ADMIN]
 
 # ---------------------------------------------------------------------------
-# Permission registry (documentation of every permission string in use)
+# Permission registry
 # ---------------------------------------------------------------------------
 PERMISSIONS = {
     "markets:create": "Create new prediction markets",
     "markets:update": "Edit existing (non-settled) markets",
     "markets:delete": "Delete non-live markets",
+    "markets:pause": "Pause/resume a live market",
     "markets:settle": "Settle a market and trigger payouts",
     "markets:templates:view": "View market creation templates",
     "users:view": "View the platform user list",
-    "users:suspend": "Suspend/reactivate a user account",
-    "wallet:adjust": "Manually credit/debit a user's wallet",
+    "users:suspend": "Suspend/reactivate (ban/unban) a user account",
+    "points:adjust": "Manually credit/debit a user's points balance",
+    "redemptions:view": "View redeem/payout requests",
+    "redemptions:approve": "Approve a redeem/payout request",
+    "redemptions:reject": "Reject a redeem/payout request",
     "stats:view": "View platform-wide statistics",
     "audit:view": "View the admin audit log",
     "roles:manage": "Change another user's role",
@@ -57,26 +53,7 @@ PERMISSIONS = {
 # Role -> permission grants
 # ---------------------------------------------------------------------------
 ROLE_PERMISSIONS = {
-    ROLE_SUPER_ADMIN: set(PERMISSIONS.keys()),  # full access, including roles:manage
-    ROLE_OPS_ADMIN: {
-        "users:view",
-        "users:suspend",
-        "wallet:adjust",
-        "stats:view",
-        "audit:view",
-    },
-    ROLE_MARKET_ADMIN: {
-        "markets:create",
-        "markets:update",
-        "markets:delete",
-        "markets:templates:view",
-        "stats:view",
-    },
-    ROLE_RISK_ADMIN: {
-        "markets:settle",
-        "stats:view",
-        "audit:view",
-    },
+    ROLE_SUPER_ADMIN: set(PERMISSIONS.keys()),
     ROLE_USER: set(),
 }
 
@@ -94,15 +71,6 @@ def _forbidden(message: str):
 
 
 def require_permission(permission: str):
-    """
-    Route decorator: requires a valid JWT AND that the caller's role
-    (from the JWT's 'role' claim) is granted `permission`.
-
-    Usage:
-        @admin_bp.route("/admin/markets/<id>/settle", methods=["POST"])
-        @require_permission("markets:settle")
-        def settle(id): ...
-    """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
@@ -119,12 +87,6 @@ def require_permission(permission: str):
 
 
 def require_any_admin_role():
-    """
-    Route decorator: requires a valid JWT AND that the caller's role is any
-    admin role (i.e. not the plain 'user' role). Use this for endpoints that
-    are shared across admin roles but don't map to a single fine-grained
-    permission (e.g. a generic "am I any kind of admin" gate).
-    """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
@@ -132,7 +94,7 @@ def require_any_admin_role():
             claims = get_jwt()
             role = claims.get("role", ROLE_USER)
             if role not in ADMIN_ROLES:
-                return _forbidden("Admin access required.")
+                return _forbidden("Super admin access required.")
             return fn(*args, **kwargs)
         return wrapper
     return decorator

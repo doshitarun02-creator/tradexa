@@ -92,10 +92,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const updateWallet = useCallback((newWallet) => {
+  const updatePoints = useCallback((newPointsBalance) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const updated = { ...prev, wallet: newWallet };
+      const updated = { ...prev, points_balance: newPointsBalance };
       window.sessionStorage.setItem(USER_KEY, JSON.stringify(updated));
       return updated;
     });
@@ -109,10 +109,10 @@ export const AuthProvider = ({ children }) => {
       login,
       logout,
       register,
-      updateWallet,
+      updatePoints,
       refreshMe,
     }),
-    [user, loading, login, logout, register, updateWallet, refreshMe]
+    [user, loading, login, logout, register, updatePoints, refreshMe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

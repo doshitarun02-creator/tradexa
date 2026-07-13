@@ -8,7 +8,7 @@ const CollapsibleSidebar = () => {
   const navItems = [
     { to: "/markets", label: "Home", icon: "🏠", exact: true },
     { to: "/markets?view=list", label: "Markets", icon: "📈" },
-    { to: "/wallet", label: "Wallet", icon: "💼" },
+    { to: "/wallet", label: "Points", icon: "💼" },
     { to: "/activity", label: "History", icon: "📜" },
     { to: "/profile", label: "Profile", icon: "👤" },
   ];
@@ -52,7 +52,7 @@ const CollapsibleSidebar = () => {
               ? location.pathname === "/markets" && !location.search
               : currentFull === item.to ||
                 (item.to === "/markets?view=list" && location.pathname.startsWith("/markets") && location.pathname !== "/markets") ||
-                (item.to === "/wallet" && location.pathname.startsWith("/withdraw"));
+                (item.to === "/wallet" && location.pathname.startsWith("/redeem"));
 
             return (
               <Link

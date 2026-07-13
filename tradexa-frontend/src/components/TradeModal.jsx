@@ -10,7 +10,7 @@ const quickChips = [5, 10, 25, 50, 100];
 
 const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) => {
   const { getPriceForSymbol } = usePrices();
-  const { updateWallet } = useAuth();
+  const { updatePoints } = useAuth();
 
   const [side, setSide] = useState(initialSide);
   const [quantity, setQuantity] = useState(10);
@@ -90,9 +90,9 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
       });
 
       if (res.data?.success) {
-        const { new_wallet_balance } = res.data.data;
-        if (typeof new_wallet_balance === "number") {
-          updateWallet(new_wallet_balance);
+        const { new_points_balance } = res.data.data;
+        if (typeof new_points_balance === "number") {
+          updatePoints(new_points_balance);
         }
         onSuccess?.(res.data.data);
         onClose?.();
@@ -196,7 +196,7 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                     : "text-slate-500 hover:bg-slate-200/80"
                 }`}
               >
-                YES ₹{(market.yes_price ?? 5).toFixed(1)}
+                YES {(market.yes_price ?? 5).toFixed(1)} pts
               </button>
               <button
                 type="button"
@@ -207,7 +207,7 @@ const TradeModal = ({ open, onClose, market, initialSide = "yes", onSuccess }) =
                     : "text-slate-500 hover:bg-slate-200/80"
                 }`}
               >
-                NO ₹{(market.no_price ?? 5).toFixed(1)}
+                NO {(market.no_price ?? 5).toFixed(1)} pts
               </button>
             </div>
 

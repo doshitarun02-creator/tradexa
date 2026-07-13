@@ -134,7 +134,7 @@ const AnimatedRoutes = () => {
             }
           />
           <Route
-            path="/withdraw"
+            path="/redeem"
             element={
               <RouteTransition>
                 <Withdraw />

@@ -24,7 +24,7 @@ def seed():
     print("Resetting user trade statistics...")
     db.users.update_many(
         {},
-        {"$set": {"wins": 0, "losses": 0, "total_trades": 0, "wallet": 10000.0}}
+        {"$set": {"wins": 0, "losses": 0, "total_trades": 0, "points_balance": 10000.0}}
     )
 
     now = datetime.now(timezone.utc)

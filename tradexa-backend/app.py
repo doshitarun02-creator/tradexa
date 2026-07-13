@@ -109,7 +109,13 @@ def setup_indexes():
         pass
 
     try:
-        db.wallet_ledger.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)])
+        db.points_ledger.create_index([("user_id", ASCENDING), ("created_at", ASCENDING)])
+    except Exception:
+        pass
+
+    try:
+        db.redeem_requests.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
+        db.redeem_requests.create_index([("status", ASCENDING), ("created_at", ASCENDING)])
     except Exception:
         pass
 
@@ -146,12 +152,14 @@ from routes.markets import markets_bp
 from routes.trades import trades_bp
 from routes.prices import prices_bp
 from routes.admin import admin_bp
+from routes.redemptions import redemptions_bp
 
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(markets_bp, url_prefix="/api")
 app.register_blueprint(trades_bp, url_prefix="/api")
 app.register_blueprint(prices_bp, url_prefix="/api")
 app.register_blueprint(admin_bp, url_prefix="/api")
+app.register_blueprint(redemptions_bp, url_prefix="/api")
 
 
 @app.route("/")

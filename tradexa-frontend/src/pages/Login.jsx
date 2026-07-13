@@ -35,22 +35,20 @@ const Login = () => {
   };
 
   return (
-    <div className="ot-auth-body">
+    <div className="ot-auth-page">
       <div className="ot-auth-card">
-        <div className="ot-auth-logo">Tradexa</div>
-        <div className="ot-auth-sub">Welcome back! Sign in to continue.</div>
-
-        <form onSubmit={handleSubmit}>
-          <label className="ot-auth-label">Email or Mobile</label>
+        <h1 className="ot-auth-brand">Tradexa</h1>
+        <p className="ot-auth-subtitle">Welcome back! Sign in to place bets and check your points.</p>
+        <form onSubmit={handleSubmit} className="ot-auth-form">
+          <label className="ot-auth-label">Email</label>
           <input
             type="text"
             className="ot-auth-input"
-            placeholder="Enter email or mobile"
+            placeholder="Enter email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-
           <label className="ot-auth-label">Password</label>
           <input
             type="password"
@@ -60,40 +58,15 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
-          <div className="ot-auth-row">
-            <label style={{ margin: 0, fontWeight: "normal", display: "flex", alignItems: "center" }}>
-              <input type="checkbox" style={{ width: "auto", marginRight: "6px" }} /> Remember me
-            </label>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert("Feature coming soon!"); }} style={{ color: "#0b6fa4", textDecoration: "none" }}>
-              Forgot Password?
-            </a>
-          </div>
-
-          <button type="submit" className="ot-auth-button" disabled={submitting}>
+          <button type="submit" className="ot-auth-submit" disabled={submitting}>
             {submitting ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        <div className="ot-auth-social">
-          <button type="button" onClick={() => alert("Google sign-in demo")}>
-            Google
-          </button>
-          <button type="button" onClick={() => alert("OTP Login demo")}>
-            OTP Login
-          </button>
-        </div>
-
-        <div className="ot-auth-links">
-          <p>
-            Don't have an account? <Link to="/register">Sign Up</Link>
-          </p>
-        </div>
+        <p className="ot-auth-footer">
+          Don't have an account? <Link to="/register">Sign Up</Link>
+        </p>
       </div>
-
-      {toast && (
-        <Toast toast={toast} onClose={() => setToast(null)} />
-      )}
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
   );
 };

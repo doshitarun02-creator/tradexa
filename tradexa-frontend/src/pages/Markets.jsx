@@ -38,7 +38,7 @@ const Markets = () => {
     setModalOpen(true);
   };
 
-  const walletBalance = user?.wallet ? Number(user.wallet).toLocaleString("en-IN") : "0";
+  const pointsBalance = user?.points_balance !== undefined ? Number(user.points_balance).toLocaleString("en-IN") : "0";
 
   if (isListView) {
     // -------------------------------------------------------------
@@ -48,7 +48,7 @@ const Markets = () => {
       <div>
         <header className="ot-header">
           <b>Markets</b>
-          <span>Balance ₹{walletBalance}</span>
+          <span>Balance {pointsBalance} pts</span>
         </header>
 
         {/* Scrolling Category Tabs */}
@@ -77,10 +77,10 @@ const Markets = () => {
                   <p>{market.category} • Ends in {formatTimeLeft(market.end_time)}</p>
                   <div className="ot-row-flex">
                     <div className="ot-market-btn ot-yes-btn" onClick={() => handleTrade(market, "yes")}>
-                      YES ₹{yesPrice.toFixed(1)}
+                      YES {yesPrice.toFixed(1)} pts
                     </div>
                     <div className="ot-market-btn ot-no-btn" onClick={() => handleTrade(market, "no")}>
-                      NO ₹{noPrice.toFixed(1)}
+                      NO {noPrice.toFixed(1)} pts
                     </div>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ const Markets = () => {
     <div>
       <header className="ot-header">
         <div className="ot-logo">Tradexa</div>
-        <div>₹{walletBalance}</div>
+        <div>{pointsBalance} pts</div>
       </header>
 
       {/* Search Input */}
@@ -130,10 +130,9 @@ const Markets = () => {
         <div className={category === "Stocks" ? "active" : ""} onClick={() => setCategory("Stocks")}>Stocks</div>
       </div>
 
-      {/* Wallet Card */}
       <div className="ot-wallet-card">
-        <h3 style={{ margin: 0, fontWeight: "normal", fontSize: "14px", opacity: 0.9 }}>Wallet Balance</h3>
-        <h1 style={{ margin: "5px 0 0", fontSize: "30px", fontWeight: "bold" }}>₹{walletBalance}.00</h1>
+        <h3 style={{ margin: 0, fontWeight: "normal", fontSize: "14px", opacity: 0.9 }}>Points Balance</h3>
+        <h1 style={{ margin: "5px 0 0", fontSize: "30px", fontWeight: "bold" }}>{pointsBalance} pts</h1>
       </div>
 
       {/* Markets Cards Grid */}

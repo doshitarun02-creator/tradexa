@@ -100,13 +100,13 @@ const MarketDetail = () => {
     );
   }
 
-  const walletBalance = user?.wallet ? Number(user.wallet).toLocaleString("en-IN") : "0";
+  const pointsBalance = user?.points_balance !== undefined ? Number(user.points_balance).toLocaleString("en-IN") : "0";
 
   return (
     <div>
       <header className="ot-header">
         <b>Market Detail</b>
-        <span>Balance ₹{walletBalance}</span>
+        <span>Balance {pointsBalance} pts</span>
       </header>
 
       <div className="ot-wrap" style={{ paddingBottom: "80px" }}>
@@ -181,7 +181,7 @@ const MarketDetail = () => {
               {trades.map((t) => (
                 <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontSize: "13px", borderBottom: "1px solid #eee" }}>
                   <span>
-                    Bought <b>{t.quantity}</b> {t.side.toUpperCase()} at <b>₹{t.price_per_share}</b>
+                    Bought <b>{t.quantity}</b> {t.side.toUpperCase()} at <b>{t.price_per_share} pts</b>
                   </span>
                   <span style={{ color: "#888" }}>{formatTimeAgo(t.created_at)}</span>
                 </div>

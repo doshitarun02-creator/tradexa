@@ -109,9 +109,9 @@ function Portfolio() {
                 <Wallet className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-slate-400">Wallet balance</p>
+                <p className="text-xs text-slate-400">Points balance</p>
                 <h2 className="mt-1 text-xl font-bold font-mono text-slate-100">
-                  {formatCurrency(portfolioData?.wallet ?? user?.wallet ?? 0)}
+                  {(portfolioData?.points_balance ?? user?.points_balance ?? 0).toLocaleString("en-IN")} pts
                 </h2>
               </div>
             </div>
@@ -123,9 +123,9 @@ function Portfolio() {
                 <CircleDollarSign className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-slate-400">Capital deployed</p>
+                <p className="text-xs text-slate-400">Points deployed</p>
                 <h2 className="mt-1 text-xl font-bold font-mono text-slate-100">
-                  {formatCurrency(portfolioData?.total_invested ?? 0)}
+                  {(portfolioData?.total_points_invested ?? 0).toLocaleString("en-IN")} pts
                 </h2>
               </div>
             </div>
@@ -137,13 +137,13 @@ function Portfolio() {
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-slate-400">Net Settled P&amp;L</p>
+                <p className="text-xs text-slate-400">Net Settled Points P&amp;L</p>
                 <h2
                   className={`mt-1 text-xl font-bold font-mono ${
-                    (portfolioData?.total_pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                    (portfolioData?.total_points_pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
                   }`}
                 >
-                  {formatCurrency(portfolioData?.total_pnl ?? 0)}
+                  {(portfolioData?.total_points_pnl ?? 0).toLocaleString("en-IN")} pts
                 </h2>
               </div>
             </div>
